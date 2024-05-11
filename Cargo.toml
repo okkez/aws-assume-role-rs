@@ -1,0 +1,25 @@
+[package]
+name = "aws-assume-role-rs"
+license = "MIT"
+authors = ["okkez <okkez000@gmail.com>"]
+description = "TODO"
+repository = "https://github.com/okkez/aws-assume-role-rs"
+homepage = "https://github.com/okkez/aws-assume-role-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "wrap_help"] }
+
+[[bin]]
+name = "assume-role"
+path = "src/main.rs"
