@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use aws_config::BehaviorVersion;
 use aws_sdk_sts as sts;
+use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
 use clap::{Parser, ValueEnum};
 use regex::Regex;
@@ -95,42 +96,43 @@ impl<'a> Cli {
             println!("Arn:     {}", response.arn().unwrap_or_default());
         }
 
-        // TODO: retry
-        let response = sts
-            .assume_role()
-            .role_session_name(format!("{}-session", now))
-            .role_arn(self.role_arn().unwrap())
-            .duration_seconds(self.duration_seconds().context("Invalid duration")?)
-            .serial_number(&self.serial_number)
-            .token_code(self.totp_code().context("Unable to generate TOTP code")?)
-            .send()
-            .await;
+        let output = (|| async {
+            sts.assume_role()
+                .role_session_name(format!("{}-session", now))
+                .role_arn(self.role_arn().unwrap())
+                .duration_seconds(self.duration_seconds().context("Invalid duration")?)
+                .serial_number(&self.serial_number)
+                .token_code(self.totp_code().context("Unable to generate TOTP code")?)
+                .send()
+                .await
+                .context("retryable")
+        })
+        .retry(&ExponentialBuilder::default())
+        .when(|e| e.to_string() == "retryable")
+        .await?;
 
-        match response {
-            Ok(output) => match output.credentials() {
-                Some(credentials) => {
-                    let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
-                        .context("")?;
-                    let envs = HashMap::from([
-                        ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-                        (
-                            "AWS_SECRET_ACCESS_KEY",
-                            credentials.secret_access_key.clone(),
-                        ),
-                        ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-                        (
-                            "AWS_EXPIRATION",
-                            dt.to_rfc3339_opts(SecondsFormat::Millis, false),
-                        ),
-                    ]);
-                    match &self.format {
-                        Some(format) => self.output(format, &envs)?,
-                        None => self.exec_command(&envs)?,
-                    };
-                }
-                None => bail!("Unable to fetch temporary credentials"),
-            },
-            Err(e) => bail!("Unable to assume role: {}", e),
+        match output.credentials() {
+            Some(credentials) => {
+                let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
+                    .context("Unable to built DateTime")?;
+                let envs = HashMap::from([
+                    ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
+                    (
+                        "AWS_SECRET_ACCESS_KEY",
+                        credentials.secret_access_key.clone(),
+                    ),
+                    ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
+                    (
+                        "AWS_EXPIRATION",
+                        dt.to_rfc3339_opts(SecondsFormat::Millis, false),
+                    ),
+                ]);
+                match &self.format {
+                    Some(format) => self.output(format, &envs)?,
+                    None => self.exec_command(&envs)?,
+                };
+            }
+            None => bail!("Unable to fetch temporary credentials"),
         };
         Ok(())
     }
