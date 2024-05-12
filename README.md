@@ -27,6 +27,7 @@ Arguments:
 
 Options:
   -p, --profile-name <PROFILE_NAME>    The profile name
+  -r, --role-arn <ROLE_ARN>            The IAM Role ARN to assume [env: ROLE_ARN=]
   -c, --config <CONFIG>                The config file. default: $HOME/.aws/config.toml
   -d, --duration <DURATION>            The duration, in seconds, of the role session. (900-43200) [default: 1h]
   -n, --serial-number <SERIAL_NUMBER>  MFA device ARN such as arn:aws:iam::123456789012/mfa/user [env: SERIAL_NUMBER=]
@@ -85,6 +86,12 @@ You can use `--profile` option to specify role ARN.
 $ AWS_PROFILE=jump assume-role --profile test --serial-number "..." --totp-secret "..." 
 ```
 
+You can use `--role-arn` option to specify role ARN directly.
+
+```console
+$ AWS_PROFILE=jump assume-role --role-arn arn:aws:iam::123456789012:role/Developer --serial-number "..." --totp-secret "..." 
+```
+
 ## Use with envchain
 
 Your can use this assume-role command with [sorah/envchain](https://github.com/sorah/envchain) or [okkez/envchain-rs](https://github.com/okkez/envchain-rs).
@@ -95,6 +102,26 @@ Store secrets in secret service or keychain.
 $ envchain --set jump AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION SERIAL_NUMBER TOTP_SECRET
 # ... input secret values
 $ envchain jump assume-role -p test-admin aws s3 ls
+```
+
+## Set environment variables
+
+### Bash
+
+```bash
+eval $(envchain jump -p test-admin --format bash)
+```
+
+### Zsh
+
+```zsh
+eval $(envchain jump -p test-admin --format zsh)
+```
+
+### Fish
+
+```fish
+eval (envchain jump -p test-admin --format fish)
 ```
 
 # License
