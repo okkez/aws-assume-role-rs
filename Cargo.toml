@@ -2,7 +2,7 @@
 name = "aws-assume-role-rs"
 license = "MIT"
 authors = ["okkez <okkez000@gmail.com>"]
-description = "TODO"
+description = "A command line tool to generate AWS temporary security credentials."
 repository = "https://github.com/okkez/aws-assume-role-rs"
 homepage = "https://github.com/okkez/aws-assume-role-rs"
 version = "0.1.0"
