@@ -20,6 +20,9 @@ struct Cli {
     /// The profile name
     #[arg(short, long)]
     profile_name: Option<String>,
+    /// The IAM Role ARN to assume
+    #[arg(short, long, env)]
+    role_arn: Option<String>,
     /// The config file. default: $HOME/.aws/config.toml
     #[arg(short, long)]
     config: Option<String>,
@@ -173,6 +176,9 @@ impl<'a> Cli {
     }
 
     fn role_arn(&self) -> Result<String> {
+        if let Some(role_arn) = self.role_arn.clone() {
+            return Ok(role_arn);
+        }
         let mut toml_str = String::new();
         let mut io = match &self.config {
             Some(path) => File::open(path).unwrap(),
