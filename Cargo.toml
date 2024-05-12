@@ -21,6 +21,7 @@ panic = "abort"
 anyhow = { version = "1.0.83", features = ["backtrace"] }
 aws-config = "1.4.0"
 aws-sdk-sts = "1.24.0"
+backon = "0.4.4"
 chrono = "0.4.38"
 clap = { version = "4", features = ["derive", "wrap_help", "env"] }
 dirs = "5.0.1"
