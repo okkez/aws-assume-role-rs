@@ -83,7 +83,8 @@ impl<'a> Cli {
     async fn execute(&self) -> Result<()> {
         let config = aws_config::defaults(BehaviorVersion::latest())
             .retry_config(aws_config::retry::RetryConfig::standard().with_max_attempts(3))
-            .load().await;
+            .load()
+            .await;
         let now = Local::now().timestamp_millis();
 
         let sts = sts::Client::new(&config);
@@ -104,25 +105,32 @@ impl<'a> Cli {
             .token_code(self.totp_code().context("Unable to generate TOTP code")?)
             .send()
             .await;
-        
+
         match response {
             Ok(output) => match output.credentials() {
                 Some(credentials) => {
-                    let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?).context("")?;
+                    let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
+                        .context("")?;
                     let envs = HashMap::from([
                         ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-                        ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
+                        (
+                            "AWS_SECRET_ACCESS_KEY",
+                            credentials.secret_access_key.clone(),
+                        ),
                         ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-                        ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
+                        (
+                            "AWS_EXPIRATION",
+                            dt.to_rfc3339_opts(SecondsFormat::Millis, false),
+                        ),
                     ]);
                     match &self.format {
                         Some(format) => self.output(format, &envs)?,
                         None => self.exec_command(&envs)?,
                     };
-                },
-                None => bail!("Unable to fetch temporary credentials")
+                }
+                None => bail!("Unable to fetch temporary credentials"),
             },
-            Err(e) => bail!("Unable to assume role: {}", e)
+            Err(e) => bail!("Unable to assume role: {}", e),
         };
         Ok(())
     }
@@ -130,9 +138,15 @@ impl<'a> Cli {
     fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<()> {
         match format {
             Format::Json => println!("{}", serde_json::to_string(envs)?),
-            Format::Bash | Format::Zsh => envs.iter().for_each(|(k, v)| println!(r#"export {}="{}""#, k, v)),
-            Format::Fish => envs.iter().for_each(|(k, v)| println!(r#"set -gx {} "{}""#, k, v)),
-            Format::PowerShell => envs.iter().for_each(|(k,v)| println!(r#"$env:{}="{}""#, k, v)),
+            Format::Bash | Format::Zsh => envs
+                .iter()
+                .for_each(|(k, v)| println!(r#"export {}="{}""#, k, v)),
+            Format::Fish => envs
+                .iter()
+                .for_each(|(k, v)| println!(r#"set -gx {} "{}""#, k, v)),
+            Format::PowerShell => envs
+                .iter()
+                .for_each(|(k, v)| println!(r#"$env:{}="{}""#, k, v)),
         }
         Ok(())
     }
@@ -142,7 +156,6 @@ impl<'a> Cli {
         Command::new(exe[0].clone()).args(args).envs(envs).exec();
         Ok(())
     }
-
 
     fn duration_seconds(&self) -> Result<i32> {
         let re = Regex::new(r"(\d+)(s|m|h)?").unwrap();
