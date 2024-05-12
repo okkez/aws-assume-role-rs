@@ -161,17 +161,15 @@ impl<'a> Cli {
     }
 
     fn totp_code(&self) -> Result<String> {
-        match self.totp_code.clone() {
-            Some(totp_code) => Ok(totp_code),
-            None => {
-                let secret = match self.totp_secret.clone() {
-                    Some(s) => Secret::Encoded(s).to_bytes().unwrap(),
-                    None => bail!("TOTP_SECRET is required"),
-                };
-                let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).unwrap();
-                Ok(totp.generate_current().unwrap())
-            }
+        if let Some(totp_code) = self.totp_code.clone() {
+            return Ok(totp_code);
         }
+        let secret = match self.totp_secret.clone() {
+            Some(s) => Secret::Encoded(s).to_bytes().unwrap(),
+            None => bail!("TOTP_SECRET is required"),
+        };
+        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).unwrap();
+        Ok(totp.generate_current().unwrap())
     }
 
     fn role_arn(&self) -> Result<String> {
