@@ -164,11 +164,15 @@ impl<'a> Cli {
     #[cfg(windows)]
     fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
         let (exe, args) = self.args.split_at(1);
-        let mut child = Command::new(exe[0].clone()).args(args).envs(envs).spawn().context("Failed to spawn command")?;
+        let mut child = Command::new(exe[0].clone())
+            .args(args)
+            .envs(envs)
+            .spawn()
+            .context("Failed to spawn command")?;
         let status = child.wait().context("Fail waiting child process")?;
         match status.code() {
             Some(code) => ::std::process::exit(code),
-            None => println!("Child process terminated by signal")
+            None => println!("Child process terminated by signal"),
         };
         Ok(())
     }
