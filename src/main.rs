@@ -118,15 +118,9 @@ impl<'a> Cli {
                     .context("Unable to built DateTime")?;
                 let envs = HashMap::from([
                     ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-                    (
-                        "AWS_SECRET_ACCESS_KEY",
-                        credentials.secret_access_key.clone(),
-                    ),
+                    ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
                     ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-                    (
-                        "AWS_EXPIRATION",
-                        dt.to_rfc3339_opts(SecondsFormat::Millis, false),
-                    ),
+                    ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
                 ]);
                 match &self.format {
                     Some(format) => self.output(format, &envs)?,
@@ -141,15 +135,9 @@ impl<'a> Cli {
     fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<()> {
         match format {
             Format::Json => println!("{}", serde_json::to_string(envs)?),
-            Format::Bash | Format::Zsh => envs
-                .iter()
-                .for_each(|(k, v)| println!(r#"export {}="{}""#, k, v)),
-            Format::Fish => envs
-                .iter()
-                .for_each(|(k, v)| println!(r#"set -gx {} "{}""#, k, v)),
-            Format::PowerShell => envs
-                .iter()
-                .for_each(|(k, v)| println!(r#"$env:{}="{}""#, k, v)),
+            Format::Bash | Format::Zsh => envs.iter().for_each(|(k, v)| println!(r#"export {}="{}""#, k, v)),
+            Format::Fish => envs.iter().for_each(|(k, v)| println!(r#"set -gx {} "{}""#, k, v)),
+            Format::PowerShell => envs.iter().for_each(|(k, v)| println!(r#"$env:{}="{}""#, k, v)),
         }
         Ok(())
     }
@@ -217,12 +205,10 @@ impl<'a> Cli {
             Some(path) => File::open(path).unwrap(),
             None => {
                 let home_dir = dirs::home_dir().context("Unable to get home directory")?;
-                File::open(home_dir.join(".aws/config.toml"))
-                    .context("Unable to read $HOME/.aws/config.toml")?
+                File::open(home_dir.join(".aws/config.toml")).context("Unable to read $HOME/.aws/config.toml")?
             }
         };
-        io.read_to_string(&mut toml_str)
-            .context("Unable to read config file")?;
+        io.read_to_string(&mut toml_str).context("Unable to read config file")?;
         let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
 
         match &self.profile_name {
@@ -249,19 +235,12 @@ impl<'a> Cli {
         }
         drop(tx_item);
 
-        let selected_items =
-            Skim::run_with(&options, Some(rx_item)).map(|out| match out.final_key {
-                Key::Enter => out.selected_items,
-                _ => vec![],
-            });
+        let selected_items = Skim::run_with(&options, Some(rx_item)).map(|out| match out.final_key {
+            Key::Enter => out.selected_items,
+            _ => vec![],
+        });
         println!("");
-        selected_items
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .output()
-            .as_ref()
-            .to_string()
+        selected_items.unwrap().get(0).unwrap().output().as_ref().to_string()
     }
 }
 
