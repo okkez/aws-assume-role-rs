@@ -1,5 +1,5 @@
 [package]
-name = "aws-assume-role-rs"
+name = "aws-assume-role"
 license = "MIT"
 authors = ["okkez <okkez000@gmail.com>"]
 description = "A command line tool to generate AWS temporary security credentials."

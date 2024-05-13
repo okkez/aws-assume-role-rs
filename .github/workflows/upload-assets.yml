@@ -63,6 +63,6 @@ jobs:
         with:
           bin: assume-role
           target: ${{ matrix.target }}
-          archive: aws-$bin-rs-$target-$tag
+          archive: aws-$bin-$target-$tag
           tar: all
           token: ${{ secrets.GITHUB_TOKEN }}
