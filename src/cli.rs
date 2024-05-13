@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use aws_config::BehaviorVersion;
 use aws_sdk_sts as sts;
 use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
@@ -76,14 +75,7 @@ struct Item {
 }
 
 impl<'a> Cli {
-    pub async fn execute(&self) -> Result<()> {
-        let config = aws_config::defaults(BehaviorVersion::latest())
-            .retry_config(aws_config::retry::RetryConfig::standard().with_max_attempts(3))
-            .load()
-            .await;
-        let now = Local::now().timestamp_millis();
-
-        let sts = sts::Client::new(&config);
+    pub async fn execute(&self, sts: &sts::Client) -> Result<()> {
         if self.verbose {
             let response = sts.get_caller_identity().send().await?;
             println!("UserId:  {}", response.user_id().unwrap_or_default());
@@ -92,6 +84,7 @@ impl<'a> Cli {
         }
 
         let output = (|| async {
+            let now = Local::now().timestamp_millis();
             sts.assume_role()
                 .role_session_name(format!("{}-session", now))
                 .role_arn(self.role_arn().unwrap())
