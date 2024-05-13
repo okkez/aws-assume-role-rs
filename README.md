@@ -106,6 +106,13 @@ $ envchain jump assume-role -p test-admin aws s3 ls
 
 ## Set environment variables
 
+You can set environment variables.
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_SESSION_TOKEN`
+- `AWS_EXPIRATION`
+
 ### Bash
 
 ```bash
