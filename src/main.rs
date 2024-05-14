@@ -11,6 +11,7 @@ use skim::{Skim, SkimItemReceiver, SkimItemSender};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+#[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use totp_rs::{Algorithm, Secret, TOTP};
@@ -153,9 +154,26 @@ impl<'a> Cli {
         Ok(())
     }
 
+    #[cfg(unix)]
     fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
         let (exe, args) = self.args.split_at(1);
         Command::new(exe[0].clone()).args(args).envs(envs).exec();
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
+        let (exe, args) = self.args.split_at(1);
+        let mut child = Command::new(exe[0].clone())
+            .args(args)
+            .envs(envs)
+            .spawn()
+            .context("Failed to spawn command")?;
+        let status = child.wait().context("Fail waiting child process")?;
+        match status.code() {
+            Some(code) => ::std::process::exit(code),
+            None => println!("Child process terminated by signal"),
+        };
         Ok(())
     }
 
