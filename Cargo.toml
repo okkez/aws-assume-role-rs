@@ -25,6 +25,7 @@ backon = "0.4.4"
 chrono = "0.4.38"
 clap = { version = "4", features = ["derive", "wrap_help", "env"] }
 dirs = "5.0.1"
+mockall = "0.12.1"
 regex = "1.10.4"
 serde = { version = "1.0.201", features = ["derive"] }
 serde_json = "1.0.117"
@@ -36,3 +37,6 @@ totp-rs = "5.5.1"
 [[bin]]
 name = "assume-role"
 path = "src/main.rs"
+
+[dev-dependencies]
+assert_cmd = "2.0.14"
