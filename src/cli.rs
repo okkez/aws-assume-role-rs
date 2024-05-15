@@ -39,13 +39,24 @@ impl StsImpl {
 
     #[allow(dead_code)]
     pub async fn get_caller_identity(&self) -> Result<GetCallerIdentityOutput> {
-        self.inner.get_caller_identity().send().await.context("Failed to call get_caller_identity")
+        self.inner
+            .get_caller_identity()
+            .send()
+            .await
+            .context("Failed to call get_caller_identity")
     }
 
     #[allow(dead_code)]
-    pub async fn assume_role(&self, role_arn: String, duration_seconds: i32, serial_number: String, token_code: String) -> Result<AssumeRoleOutput> {
+    pub async fn assume_role(
+        &self,
+        role_arn: String,
+        duration_seconds: i32,
+        serial_number: String,
+        token_code: String,
+    ) -> Result<AssumeRoleOutput> {
         let now = Local::now().timestamp_millis();
-        self.inner.assume_role()
+        self.inner
+            .assume_role()
             .role_session_name(format!("{}-session", now))
             .role_arn(role_arn)
             .duration_seconds(duration_seconds)
@@ -56,7 +67,6 @@ impl StsImpl {
             .context("Failed to call assume_role")
     }
 }
-
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -134,7 +144,7 @@ impl<'a> Cli {
             ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
         ]);
         match &self.format {
-            Some(format) => self.output(format, &envs)?,
+            Some(format) => println!("{}", self.output(format, &envs)?),
             None => self.exec_command(&envs)?,
         };
         Ok(())
@@ -142,12 +152,14 @@ impl<'a> Cli {
 
     pub async fn get_caller_identity(&self, sts: &Sts) -> Result<String> {
         let response = sts.get_caller_identity().await?;
-        Ok(format!("UserId:  {}\n\
+        Ok(format!(
+            "UserId:  {}\n\
                     Account: {}\n\
                     Arn:     {}",
-                response.user_id().unwrap_or_default(),
-                response.account().unwrap_or_default(),
-                response.arn().unwrap_or_default()))
+            response.user_id().unwrap_or_default(),
+            response.account().unwrap_or_default(),
+            response.arn().unwrap_or_default()
+        ))
     }
 
     pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
@@ -158,8 +170,10 @@ impl<'a> Cli {
                 role_arn.clone(),
                 duration_seconds,
                 self.serial_number.clone(),
-                self.totp_code().context("Unable to generate TOTP code")?
-            ).await.context("retryable")
+                self.totp_code().context("Unable to generate TOTP code")?,
+            )
+            .await
+            .context("retryable")
         })
         .retry(&ExponentialBuilder::default())
         .when(|e| e.to_string() == "retryable")
@@ -170,14 +184,26 @@ impl<'a> Cli {
         }
     }
 
-    fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<()> {
-        match format {
-            Format::Json => println!("{}", serde_json::to_string(envs)?),
-            Format::Bash | Format::Zsh => envs.iter().for_each(|(k, v)| println!(r#"export {}="{}""#, k, v)),
-            Format::Fish => envs.iter().for_each(|(k, v)| println!(r#"set -gx {} "{}""#, k, v)),
-            Format::PowerShell => envs.iter().for_each(|(k, v)| println!(r#"$env:{}="{}""#, k, v)),
-        }
-        Ok(())
+    fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<String> {
+        let result = match format {
+            Format::Json => serde_json::to_string(envs)?,
+            Format::Bash | Format::Zsh => envs
+                .iter()
+                .map(|(k, v)| format!(r#"export {}="{}""#, k, v))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Format::Fish => envs
+                .iter()
+                .map(|(k, v)| format!(r#"set -gx {} "{}""#, k, v))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Format::PowerShell => envs
+                .iter()
+                .map(|(k, v)| format!(r#"$env:{}="{}""#, k, v))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        };
+        Ok(result)
     }
 
     #[cfg(unix)]
@@ -295,23 +321,80 @@ impl SkimItem for Item {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockall::predicate::eq;
+    use sts::types::AssumedRoleUser;
 
     #[tokio::test]
     async fn test_get_caller_identity() {
         let cli = Cli::parse_from(["assume-role", "--serial-number=test_serial_number"]);
         let mut mock = MockStsImpl::default();
-        mock.expect_get_caller_identity()
-            .return_once(|| Ok(GetCallerIdentityOutput::builder()
-                               .user_id("test-user")
-                               .account("123456789012")
-                               .arn("arn:aws:iam:123456789012:user/test-user")
-                               .build()));
+        mock.expect_get_caller_identity().return_once(|| {
+            Ok(GetCallerIdentityOutput::builder()
+                .user_id("test-user")
+                .account("123456789012")
+                .arn("arn:aws:iam:123456789012:user/test-user")
+                .build())
+        });
         let result = cli.get_caller_identity(&mock).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(),
-                   format!("UserId:  test-user\n\
-                            Account: 123456789012\n\
-                            Arn:     arn:aws:iam:123456789012:user/test-user"));
+        assert_eq!(
+            result.unwrap(),
+            format!(
+                "UserId:  test-user\n\
+                 Account: 123456789012\n\
+                 Arn:     arn:aws:iam:123456789012:user/test-user"
+            )
+        );
     }
 
+    #[tokio::test]
+    async fn test_assume_role() {
+        let cli = Cli::parse_from([
+            "assume-role",
+            "--serial-number=test_serial_number",
+            "--role-arn=test-role",
+            "--totp-code=123456",
+        ]);
+        let mut mock = MockStsImpl::default();
+        mock.expect_assume_role()
+            .with(
+                eq("test-role".to_string()),
+                eq(3600),
+                eq("test_serial_number".to_string()),
+                eq("123456".to_string()),
+            )
+            .return_once(|role, _duration, _, _| {
+                let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
+                    .unwrap()
+                    .to_utc()
+                    .timestamp();
+                let expiration = sts::primitives::DateTime::from_secs(timestamp);
+
+                Ok(AssumeRoleOutput::builder()
+                    .assumed_role_user(
+                        AssumedRoleUser::builder()
+                            .assumed_role_id(role)
+                            .arn("arn:iam:::user/test-assumed-user")
+                            .build()
+                            .context("failed to build AssumedRoleUser")?,
+                    )
+                    .credentials(
+                        sts::types::Credentials::builder()
+                            .access_key_id("test_access_key_id")
+                            .secret_access_key("test_secret_access_key")
+                            .session_token("test_session_token")
+                            .expiration(expiration)
+                            .build()
+                            .context("Failed to build Credentials")?,
+                    )
+                    .build())
+            });
+
+        let result = cli.assume_role(&mock).await;
+        assert!(result.is_ok());
+        let credentials = result.unwrap();
+        assert_eq!("test_access_key_id", credentials.access_key_id());
+        assert_eq!("test_secret_access_key", credentials.secret_access_key());
+        assert_eq!("test_session_token", credentials.session_token());
+    }
 }

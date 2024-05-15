@@ -1,8 +1,7 @@
 use aws_assume_role::cli::Cli;
-use clap::Parser;
 use aws_config::BehaviorVersion;
 use aws_sdk_sts as sts;
-
+use clap::Parser;
 
 #[::tokio::main]
 async fn main() {
