@@ -153,9 +153,7 @@ impl<'a> Cli {
     pub async fn get_caller_identity(&self, sts: &Sts) -> Result<String> {
         let response = sts.get_caller_identity().await?;
         Ok(format!(
-            "UserId:  {}\n\
-                    Account: {}\n\
-                    Arn:     {}",
+            "UserId:  {}\nAccount: {}\nArn:     {}",
             response.user_id().unwrap_or_default(),
             response.account().unwrap_or_default(),
             response.arn().unwrap_or_default()
