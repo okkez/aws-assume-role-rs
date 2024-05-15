@@ -15,6 +15,49 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 use totp_rs::{Algorithm, Secret, TOTP};
 
+#[allow(unused_imports)]
+use mockall::automock;
+use sts::operation::assume_role::AssumeRoleOutput;
+use sts::operation::get_caller_identity::GetCallerIdentityOutput;
+
+#[cfg(test)]
+use MockStsImpl as Sts;
+#[cfg(not(test))]
+use StsImpl as Sts;
+
+#[allow(dead_code)]
+pub struct StsImpl {
+    inner: sts::Client,
+}
+
+#[cfg_attr(test, automock)]
+impl StsImpl {
+    #[allow(dead_code)]
+    pub fn new(inner: sts::Client) -> Self {
+        Self { inner }
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_caller_identity(&self) -> Result<GetCallerIdentityOutput> {
+        self.inner.get_caller_identity().send().await.context("Failed to call get_caller_identity")
+    }
+
+    #[allow(dead_code)]
+    pub async fn assume_role(&self, role_arn: String, duration_seconds: i32, serial_number: String, token_code: String) -> Result<AssumeRoleOutput> {
+        let now = Local::now().timestamp_millis();
+        self.inner.assume_role()
+            .role_session_name(format!("{}-session", now))
+            .role_arn(role_arn)
+            .duration_seconds(duration_seconds)
+            .serial_number(serial_number)
+            .token_code(token_code)
+            .send()
+            .await
+            .context("Failed to call assume_role")
+    }
+}
+
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
@@ -75,48 +118,56 @@ struct Item {
 }
 
 impl<'a> Cli {
-    pub async fn execute(&self, sts: &sts::Client) -> Result<()> {
+    pub async fn execute(&self, sts_client: sts::Client) -> Result<()> {
+        let sts = Sts::new(sts_client);
         if self.verbose {
-            let response = sts.get_caller_identity().send().await?;
-            println!("UserId:  {}", response.user_id().unwrap_or_default());
-            println!("Account: {}", response.account().unwrap_or_default());
-            println!("Arn:     {}", response.arn().unwrap_or_default());
+            println!("{}", self.get_caller_identity(&sts).await?);
         }
 
+        let credentials = self.assume_role(&sts).await?;
+        let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
+            .context("Unable to built DateTime")?;
+        let envs = HashMap::from([
+            ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
+            ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
+            ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
+            ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
+        ]);
+        match &self.format {
+            Some(format) => self.output(format, &envs)?,
+            None => self.exec_command(&envs)?,
+        };
+        Ok(())
+    }
+
+    pub async fn get_caller_identity(&self, sts: &Sts) -> Result<String> {
+        let response = sts.get_caller_identity().await?;
+        Ok(format!("UserId:  {}\n\
+                    Account: {}\n\
+                    Arn:     {}",
+                response.user_id().unwrap_or_default(),
+                response.account().unwrap_or_default(),
+                response.arn().unwrap_or_default()))
+    }
+
+    pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
+        let role_arn = self.role_arn().context("Unable to set role_arn")?;
+        let duration_seconds = self.duration_seconds().context("Invalid duration")?;
         let output = (|| async {
-            let now = Local::now().timestamp_millis();
-            sts.assume_role()
-                .role_session_name(format!("{}-session", now))
-                .role_arn(self.role_arn().unwrap())
-                .duration_seconds(self.duration_seconds().context("Invalid duration")?)
-                .serial_number(&self.serial_number)
-                .token_code(self.totp_code().context("Unable to generate TOTP code")?)
-                .send()
-                .await
-                .context("retryable")
+            sts.assume_role(
+                role_arn.clone(),
+                duration_seconds,
+                self.serial_number.clone(),
+                self.totp_code().context("Unable to generate TOTP code")?
+            ).await.context("retryable")
         })
         .retry(&ExponentialBuilder::default())
         .when(|e| e.to_string() == "retryable")
         .await?;
-
         match output.credentials() {
-            Some(credentials) => {
-                let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
-                    .context("Unable to built DateTime")?;
-                let envs = HashMap::from([
-                    ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-                    ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
-                    ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-                    ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
-                ]);
-                match &self.format {
-                    Some(format) => self.output(format, &envs)?,
-                    None => self.exec_command(&envs)?,
-                };
-            }
+            Some(credentials) => Ok(credentials.clone()),
             None => bail!("Unable to fetch temporary credentials"),
-        };
-        Ok(())
+        }
     }
 
     fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<()> {
@@ -239,4 +290,28 @@ impl SkimItem for Item {
     fn output(&self) -> Cow<str> {
         Cow::Borrowed(&self.role_arn)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_caller_identity() {
+        let cli = Cli::parse_from(["assume-role", "--serial-number=test_serial_number"]);
+        let mut mock = MockStsImpl::default();
+        mock.expect_get_caller_identity()
+            .return_once(|| Ok(GetCallerIdentityOutput::builder()
+                               .user_id("test-user")
+                               .account("123456789012")
+                               .arn("arn:aws:iam:123456789012:user/test-user")
+                               .build()));
+        let result = cli.get_caller_identity(&mock).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(),
+                   format!("UserId:  test-user\n\
+                            Account: 123456789012\n\
+                            Arn:     arn:aws:iam:123456789012:user/test-user"));
+    }
+
 }
