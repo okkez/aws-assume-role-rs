@@ -14,5 +14,5 @@ async fn main() {
         .await;
     let sts = sts::Client::new(&config);
 
-    cli.execute(&sts).await.unwrap();
+    cli.execute(sts).await.unwrap();
 }
