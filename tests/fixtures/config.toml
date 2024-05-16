@@ -1,0 +1,5 @@
+[profile.test]
+role_arn = "arn:aws:iam::987654321234:role/TestUser"
+
+[profile.admin]
+role_arn = "arn:aws:iam::987654321234:role/AdminUser"

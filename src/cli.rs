@@ -6,6 +6,7 @@ use clap::{Parser, ValueEnum};
 use regex::Regex;
 use serde::Deserialize;
 use skim::prelude::*;
+#[allow(unused_imports)]
 use skim::{Skim, SkimItemReceiver, SkimItemSender};
 use std::collections::HashMap;
 use std::fs::File;
@@ -122,6 +123,7 @@ struct Profile {
     role_arn: String,
 }
 
+#[allow(dead_code)]
 struct Item {
     label: String,
     role_arn: String,
@@ -272,7 +274,8 @@ impl<'a> Cli {
         };
         io.read_to_string(&mut toml_str).context("Unable to read config file")?;
         let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
-
+        dbg!(&config);
+        dbg!(&self.profile_name);
         match &self.profile_name {
             Some(name) => match config.profile.get(name) {
                 Some(profile) => Ok(profile.role_arn.clone()),
@@ -282,6 +285,12 @@ impl<'a> Cli {
         }
     }
 
+    #[cfg(test)]
+    fn select_role_arn(&self, _config: &Config) -> String {
+        panic!("select_role_arn is interactive method, so cannot invoke if test. check arguments before debug.");
+    }
+
+    #[cfg(not(test))]
     fn select_role_arn(&self, config: &Config) -> String {
         let options = SkimOptionsBuilder::default()
             .bind(vec!["Enter::accept"])
