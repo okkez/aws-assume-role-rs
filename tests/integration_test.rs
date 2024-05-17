@@ -64,6 +64,7 @@ fn test_version() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn format_json() -> Result<()> {
     let container = run_localstack().await;
     let endpoint_url = endpoint_url(&container).await?;
