@@ -75,20 +75,29 @@ impl StsImpl {
 #[command(version, about, long_about = None)]
 pub struct Cli {
     /// The profile name
-    #[arg(short, long)]
+    #[arg(short, long, conflicts_with = "role_arn")]
     profile_name: Option<String>,
 
     /// The IAM Role ARN to assume
-    #[arg(short, long, env)]
+    #[arg(short, long, env, conflicts_with = "profile_name")]
     role_arn: Option<String>,
 
     /// The config file. default: $HOME/.aws/config.toml
-    #[arg(short, long)]
+    /// Load the first of the following files found:
+    ///   1. the file specified by this option
+    ///   2. $HOME/.aws/config.toml
+    ///   3. $HOME/.aws/config
+    #[arg(short, long, verbatim_doc_comment)]
     config: Option<PathBuf>,
 
-    /// The duration, in seconds, of the role session. (900-43200)
-    #[arg(short, long, default_value = "1h")]
-    duration: String,
+    /// The duration in seconds of the role session. (900-43200)
+    /// The following suffixes are available:
+    ///   "s": seconds
+    ///   "m": minutes
+    ///   "h": hours
+    /// No suffix means seconds.
+    #[arg(short, long, default_value = "1h", value_parser = parse_duration, verbatim_doc_comment)]
+    duration: i32,
 
     /// MFA device ARN such as arn:aws:iam::123456789012/mfa/user
     #[arg(short = 'n', long, env)]
@@ -129,6 +138,27 @@ enum Format {
     Zsh,
     Fish,
     PowerShell,
+}
+
+fn parse_duration(s: &str) -> Result<i32> {
+    let re = Regex::new(r"(\d+)(s|m|h)?").unwrap();
+    let duration = match re.captures(s) {
+        Some(caps) => match (caps[1].parse::<i32>(), caps.get(2)) {
+            (Ok(amount), Some(m)) if m.as_str() == "s" => amount,
+            (Ok(amount), Some(m)) if m.as_str() == "m" => amount * 60,
+            (Ok(amount), Some(m)) if m.as_str() == "h" => amount * 60 * 60,
+            (Ok(amount), None) => amount,
+            (Ok(_), Some(_)) => bail!("Unexpected {}", s),
+            (Err(e), _) => bail!("Failed to parse duration: {} {:?}", s, e),
+        },
+        None => bail!("Failed to parse duration: {}", s),
+    };
+    ensure!(
+        duration >= 900 && duration <= 43200,
+        "duration ({}) must be between 900 seconds (15 minutes) and 43200 seconds (12 hours)",
+        s
+    );
+    Ok(duration)
 }
 
 #[derive(Debug, Deserialize)]
@@ -182,7 +212,7 @@ impl<'a> Cli {
 
     pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
         let role_arn = self.role_arn().context("Unable to set role_arn")?;
-        let duration_seconds = self.duration_seconds().context("Invalid duration")?;
+        let duration_seconds = self.duration;
         let output = (|| async {
             sts.assume_role(
                 role_arn.clone(),
@@ -247,25 +277,6 @@ impl<'a> Cli {
         Ok(())
     }
 
-    fn duration_seconds(&self) -> Result<i32> {
-        let re = Regex::new(r"(\d+)(s|m|h)?").unwrap();
-        let duration = match re.captures(&self.duration) {
-            Some(caps) => match (caps[1].parse::<i32>(), &caps[2]) {
-                (Ok(seconds), "s") => seconds,
-                (Ok(minutes), "m") => minutes * 60,
-                (Ok(hours), "h") => hours * 60 * 60,
-                (_, _) => 900,
-            },
-            None => 900,
-        };
-        ensure!(
-            duration >= 900 && duration <= 43200,
-            "duration ({}) must be between 900 seconds (15 minutes) and 43200 seconds (12 hours)",
-            duration
-        );
-        Ok(duration)
-    }
-
     fn totp_code(&self) -> Result<String> {
         if let Some(totp_code) = self.totp_args.totp_code.clone() {
             return Ok(totp_code);
@@ -299,7 +310,7 @@ impl<'a> Cli {
                 Some(ext) if ext == "toml" => self.config_from_toml(path),
                 Some(ext) => bail!("Unsupported extension: {:?}", ext),
                 None => self.config_from_ini(path),
-            }
+            },
             None => {
                 let home_dir = dirs::home_dir().context("Unable to get home directory")?;
                 let path = home_dir
@@ -312,20 +323,18 @@ impl<'a> Cli {
     }
 
     fn config_from_toml(&self, path: &PathBuf) -> Result<Config> {
-        println!("toml");
         let mut toml_str = String::new();
-        let mut io = File::open(path).with_context( || format!("Unable to open file {:?}", path))?;
+        let mut io = File::open(path).with_context(|| format!("Unable to open file {:?}", path))?;
         io.read_to_string(&mut toml_str).context("Unable to read config file")?;
         let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
         Ok(config)
     }
 
     fn config_from_ini(&self, path: &PathBuf) -> Result<Config> {
-        println!("ini");
         let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
         let profile = ini
             .sections()
-            .filter(|section| section.is_some() && ini.get_from(Some(section.unwrap()), "role_arn").is_some() )
+            .filter(|section| section.is_some() && ini.get_from(Some(section.unwrap()), "role_arn").is_some())
             .flat_map(|item| {
                 item.map(|key| {
                     let key_part = key.split(' ').collect::<Vec<_>>().last().unwrap().to_string();
@@ -381,12 +390,50 @@ impl SkimItem for Item {
 mod tests {
     use super::*;
     use mockall::predicate::eq;
+    use pretty_assertions::assert_eq;
+    use rstest::rstest;
     use std::path::Path;
     use sts::types::AssumedRoleUser;
 
+    fn duration_range_error(d: &str) -> String {
+        format!(
+            "duration ({}) must be between 900 seconds (15 minutes) and 43200 seconds (12 hours)",
+            d
+        )
+    }
+
+    #[rstest]
+    #[case::error_empty_string("", 0, "Failed to parse duration: ")]
+    #[case::error_less_than_min_n("899", 899, duration_range_error("899"))]
+    #[case::error_less_than_min_s("899s", 899, duration_range_error("899s"))]
+    #[case::error_more_than_max_n("43201", 43201, duration_range_error("43201"))]
+    #[case::error_more_than_max_s("43201s", 899, duration_range_error("43201s"))]
+    #[case::error_less_than_min_m("14m", 840, duration_range_error("14m"))]
+    #[case::error_more_than_max_m("721m", 840, duration_range_error("721m"))]
+    #[case::error_more_than_max_h("13h", 840, duration_range_error("13h"))]
+    #[case::success_1_hour("1h", 3600, "")]
+    #[case::success_12_hours("12h", 43200, "")]
+    #[case::success_15_minutes("15m", 900, "")]
+    #[case::success_720_minutes("720m", 43200, "")]
+    #[case::success_900_seconds("900s", 900, "")]
+    #[case::success_43200_seconds("43200s", 43200, "")]
+    #[case::success_900("900", 900, "")]
+    #[case::success_43200("43200", 43200, "")]
+    fn test_parse_duration(#[case] s: &str, #[case] expected: i32, #[case] message: String) -> Result<()> {
+        match parse_duration(s) {
+            Ok(actual) => assert_eq!(actual, expected),
+            Err(e) => assert_eq!(e.to_string(), message),
+        };
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_get_caller_identity() {
-        let cli = Cli::parse_from(["assume-role", "--serial-number=test_serial_number", "--totp-code=123456"]);
+        let cli = Cli::parse_from([
+            "assume-role",
+            "--serial-number=test_serial_number",
+            "--totp-code=123456",
+        ]);
         let mut mock = MockStsImpl::default();
         mock.expect_get_caller_identity().return_once(|| {
             Ok(GetCallerIdentityOutput::builder()
