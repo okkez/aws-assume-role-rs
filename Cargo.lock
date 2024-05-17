@@ -161,7 +161,6 @@ dependencies = [
  "clap 4.5.4",
  "dirs",
  "mockall",
- "once_cell",
  "regex",
  "rstest",
  "serde",
