@@ -329,6 +329,7 @@ impl SkimItem for Item {
 mod tests {
     use super::*;
     use mockall::predicate::eq;
+    use std::path::Path;
     use sts::types::AssumedRoleUser;
 
     #[tokio::test]
@@ -367,6 +368,64 @@ mod tests {
             .with(
                 eq("test-role".to_string()),
                 eq(3600),
+                eq("test_serial_number".to_string()),
+                eq("123456".to_string()),
+            )
+            .return_once(|role, _duration, _, _| {
+                let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
+                    .unwrap()
+                    .to_utc()
+                    .timestamp();
+                let expiration = sts::primitives::DateTime::from_secs(timestamp);
+
+                Ok(AssumeRoleOutput::builder()
+                    .assumed_role_user(
+                        AssumedRoleUser::builder()
+                            .assumed_role_id(role)
+                            .arn("arn:iam:::user/test-assumed-user")
+                            .build()
+                            .context("failed to build AssumedRoleUser")?,
+                    )
+                    .credentials(
+                        sts::types::Credentials::builder()
+                            .access_key_id("test_access_key_id")
+                            .secret_access_key("test_secret_access_key")
+                            .session_token("test_session_token")
+                            .expiration(expiration)
+                            .build()
+                            .context("Failed to build Credentials")?,
+                    )
+                    .build())
+            });
+
+        let result = cli.assume_role(&mock).await;
+        assert!(result.is_ok());
+        let credentials = result.unwrap();
+        assert_eq!("test_access_key_id", credentials.access_key_id());
+        assert_eq!("test_secret_access_key", credentials.secret_access_key());
+        assert_eq!("test_session_token", credentials.session_token());
+    }
+
+    #[tokio::test]
+    async fn test_assume_role_with_config_file() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests/fixtures/config.toml"));
+        let full_path = path.canonicalize().unwrap();
+
+        let cli = Cli::parse_from([
+            "assume-role",
+            "--serial-number=test_serial_number",
+            "--totp-code=123456",
+            "--duration=12h",
+            "--format=json",
+            "--config",
+            full_path.to_str().unwrap(),
+            "--profile-name=test",
+        ]);
+        let mut mock = MockStsImpl::default();
+        mock.expect_assume_role()
+            .with(
+                eq("arn:aws:iam::987654321234:role/TestUser".to_string()),
+                eq(3600 * 12),
                 eq("test_serial_number".to_string()),
                 eq("123456".to_string()),
             )
