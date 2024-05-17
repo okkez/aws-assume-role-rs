@@ -31,10 +31,15 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-binstall,cargo-nextest
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Run cargo test
-        run: cargo test
+        run: cargo nextest run
 
 
   lints:
