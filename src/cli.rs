@@ -3,6 +3,7 @@ use aws_sdk_sts as sts;
 use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
 use clap::{Parser, ValueEnum};
+use ini::Ini;
 use regex::Regex;
 use serde::Deserialize;
 use skim::prelude::*;
@@ -264,18 +265,8 @@ impl<'a> Cli {
         if let Some(role_arn) = self.role_arn.clone() {
             return Ok(role_arn);
         }
-        let mut toml_str = String::new();
-        let mut io = match &self.config {
-            Some(path) => File::open(path).unwrap(),
-            None => {
-                let home_dir = dirs::home_dir().context("Unable to get home directory")?;
-                File::open(home_dir.join(".aws/config.toml")).context("Unable to read $HOME/.aws/config.toml")?
-            }
-        };
-        io.read_to_string(&mut toml_str).context("Unable to read config file")?;
-        let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
-        dbg!(&config);
-        dbg!(&self.profile_name);
+
+        let config = self.config_from_path(&self.config).context("Unable to load config")?;
         match &self.profile_name {
             Some(name) => match config.profile.get(name) {
                 Some(profile) => Ok(profile.role_arn.clone()),
@@ -283,6 +274,45 @@ impl<'a> Cli {
             },
             None => Ok(self.select_role_arn(&config)),
         }
+    }
+
+    fn config_from_path(&self, path: &Option<String>) -> Result<Config> {
+        match path {
+            Some(path) if path.ends_with(".toml") => self.config_from_toml(path),
+            Some(path) => self.config_from_ini(path),
+            None => {
+                let home_dir = dirs::home_dir().context("Unable to get home directory")?;
+                let path = home_dir
+                    .join(".aws/config.toml")
+                    .canonicalize()
+                    .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap());
+                self.config_from_path(&Some(path.to_str().unwrap().to_string()))
+            }
+        }
+    }
+
+    fn config_from_toml(&self, path: &str) -> Result<Config> {
+        let mut toml_str = String::new();
+        let mut io = File::open(path).context(format!("Unable to open file {}", path))?;
+        io.read_to_string(&mut toml_str).context("Unable to read config file")?;
+        let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
+        Ok(config)
+    }
+
+    fn config_from_ini(&self, path: &str) -> Result<Config> {
+        let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
+        let profile = ini
+            .sections()
+            .filter(|section| section.is_some() && ini.get_from(Some(section.unwrap()), "role_arn").is_some() )
+            .flat_map(|item| {
+                item.map(|key| {
+                    let key_part = key.split(' ').collect::<Vec<_>>().last().unwrap().to_string();
+                    let role_arn = ini.get_from(Some(key), "role_arn").unwrap().to_string();
+                    (key_part, Profile { role_arn })
+                })
+            })
+            .collect::<HashMap<String, Profile>>();
+        Ok(Config { profile })
     }
 
     #[cfg(test)]
