@@ -14,6 +14,7 @@ use std::fs::File;
 use std::io::Read;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::process::Command;
 use totp_rs::{Algorithm, Secret, TOTP};
 
@@ -81,7 +82,7 @@ pub struct Cli {
     role_arn: Option<String>,
     /// The config file. default: $HOME/.aws/config.toml
     #[arg(short, long)]
-    config: Option<String>,
+    config: Option<PathBuf>,
     /// The duration, in seconds, of the role session. (900-43200)
     #[arg(short, long, default_value = "1h")]
     duration: String,
@@ -276,30 +277,35 @@ impl<'a> Cli {
         }
     }
 
-    fn config_from_path(&self, path: &Option<String>) -> Result<Config> {
+    fn config_from_path(&self, path: &Option<PathBuf>) -> Result<Config> {
         match path {
-            Some(path) if path.ends_with(".toml") => self.config_from_toml(path),
-            Some(path) => self.config_from_ini(path),
+            Some(path) => match path.extension() {
+                Some(ext) if ext == "toml" => self.config_from_toml(path),
+                Some(ext) => bail!("Unsupported extension: {:?}", ext),
+                None => self.config_from_ini(path),
+            }
             None => {
                 let home_dir = dirs::home_dir().context("Unable to get home directory")?;
                 let path = home_dir
                     .join(".aws/config.toml")
                     .canonicalize()
                     .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap());
-                self.config_from_path(&Some(path.to_str().unwrap().to_string()))
+                self.config_from_path(&Some(path))
             }
         }
     }
 
-    fn config_from_toml(&self, path: &str) -> Result<Config> {
+    fn config_from_toml(&self, path: &PathBuf) -> Result<Config> {
+        println!("toml");
         let mut toml_str = String::new();
-        let mut io = File::open(path).context(format!("Unable to open file {}", path))?;
+        let mut io = File::open(path).with_context( || format!("Unable to open file {:?}", path))?;
         io.read_to_string(&mut toml_str).context("Unable to read config file")?;
         let config: Config = toml::from_str(&toml_str).context("Unable to parse config file")?;
         Ok(config)
     }
 
-    fn config_from_ini(&self, path: &str) -> Result<Config> {
+    fn config_from_ini(&self, path: &PathBuf) -> Result<Config> {
+        println!("ini");
         let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
         let profile = ini
             .sections()
@@ -487,7 +493,8 @@ mod tests {
             });
 
         let result = cli.assume_role(&mock).await;
-        assert!(result.is_ok());
+        dbg!(&result);
+        debug_assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
