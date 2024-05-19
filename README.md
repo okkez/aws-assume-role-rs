@@ -84,7 +84,7 @@ role_arn = arn:aws:iam::123456789876:role/Viewer
 role_arn = arn:aws:iam::123456789876:role/Maintainer
 ```
 
-The INI file format ignores all sections that doesn't have property `role_arn`.
+The INI file format ignores all sections that do not have property `role_arn`.
 
 ## Interactive mode
 
