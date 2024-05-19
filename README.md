@@ -112,13 +112,13 @@ $ env AWS_PROIFLE=jump assume-role --serial-number="..." --totp-code="..." assum
 You can use `--profile` option to specify role ARN.
 
 ```console
-$ AWS_PROFILE=jump assume-role --profile-name test --serial-number "..." --totp-secret "..." 
+$ AWS_PROFILE=jump assume-role --profile-name test --serial-number "..." --totp-secret "..." aws s3 ls
 ```
 
 You can use `--role-arn` option to specify role ARN directly.
 
 ```console
-$ AWS_PROFILE=jump assume-role --role-arn arn:aws:iam::123456789012:role/Developer --serial-number "..." --totp-secret "..." 
+$ AWS_PROFILE=jump assume-role --role-arn arn:aws:iam::123456789012:role/Developer --serial-number "..." --totp-secret "..." aws s3 ls
 ```
 
 ## Use with envchain
