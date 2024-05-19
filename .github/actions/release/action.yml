@@ -24,6 +24,6 @@ runs:
       with:
         bin: assume-role
         target: ${{ inputs.RUST_TARGET }}
-        archive: aws-$bin-$target-$tag
+        archive: aws-$bin-rs-$target-$tag
         tar: unix
         token: ${{ inputs.GITHUB_TOKEN }}
