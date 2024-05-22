@@ -74,8 +74,9 @@ impl StsImpl {
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-    /// AWS profile name in $HOME/.aws/config
-    #[arg(long)]
+    /// AWS profile name in AWS_CONFIG_FILE.
+    /// This option is used to detect jump account information.
+    #[arg(long, env)]
     pub aws_profile: Option<String>,
     /// The profile name
     #[arg(short, long, conflicts_with = "role_arn")]
