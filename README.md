@@ -16,16 +16,19 @@ $ cargo install aws-assume-role-rs
 
 # How to use
 
+## Command line options
+
 ```console
 $ assume-role --help
 A command line tool to generate AWS temporary security credentials.
 
-Usage: assume-role [OPTIONS] --serial-number <SERIAL_NUMBER> <--totp-secret <TOTP_SECRET>|--totp-code <TOTP_CODE>> [ARGS]...
+Usage: assume-role [OPTIONS] <--totp-secret <TOTP_SECRET>|--totp-code <TOTP_CODE>> [ARGS]...
 
 Arguments:
   [ARGS]...  Commands to execute
 
 Options:
+      --aws-profile <AWS_PROFILE>      AWS profile name in AWS_CONFIG_FILE. This option is used to detect jump account information [env: AWS_PROFILE=]
   -p, --profile-name <PROFILE_NAME>    The profile name
   -r, --role-arn <ROLE_ARN>            The IAM Role ARN to assume [env: ROLE_ARN=]
   -c, --config <CONFIG>                The config file. default: $HOME/.aws/config.toml
@@ -47,6 +50,26 @@ Options:
   -h, --help                           Print help
   -V, --version                        Print version
 ```
+
+### The priority to find role ARN
+
+1. `--role-arn` option
+1. Find by `--profile-name` option from a configuration file
+1. Select role ARN from a list loaded from a configuration file in an interactive UI
+
+### The priority of configuration files
+
+1. `--config` option
+1. `$HOME/.aws/config.toml`
+1. `$HOME/.aws/config`
+
+### The priority to find jump account
+
+Such as AWS credentials, serial number, and, TOTP secrets.
+
+1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SERIAL_NUMBER`, `TOTP_SECRET`)
+1. INI format file specified by `--config` option and `--aws-profile` option
+1. Load credentials according to aws_config's default rule
 
 ## Set up
 
@@ -71,6 +94,13 @@ The TOML format only supports sections with the key role_arn.
 or create $HOME/.aws/config:
 
 ```ini
+[profile jump]
+region = ap-northeast-1
+serial_number = arn:aws:iam::987654321234:mfa/serialnumber
+
+[profile jump2]
+region = ap-northeast-1
+
 [profile test]
 role_arn = arn:aws:iam::123456789012:role/Developer
 
@@ -84,7 +114,7 @@ role_arn = arn:aws:iam::123456789876:role/Viewer
 role_arn = arn:aws:iam::123456789876:role/Maintainer
 ```
 
-The INI file format ignores all sections that do not have property `role_arn`.
+The INI file format ignores all sections that do not have property `role_arn` to find `role_arn`.
 
 ## Interactive mode
 
@@ -112,13 +142,15 @@ $ env AWS_PROIFLE=jump assume-role --serial-number="..." --totp-code="..." assum
 You can use `--profile` option to specify role ARN.
 
 ```console
-$ AWS_PROFILE=jump assume-role --profile-name test --serial-number "..." --totp-secret "..." aws s3 ls
+$ AWS_PROFILE=jump assume-role --profile-name test --totp-secret "..." aws s3 ls
+or
+$ assume-role --aws-profile=jump --profile-name=test --totp-code=123456 aws s3 ls
 ```
 
 You can use `--role-arn` option to specify role ARN directly.
 
 ```console
-$ AWS_PROFILE=jump assume-role --role-arn arn:aws:iam::123456789012:role/Developer --serial-number "..." --totp-secret "..." aws s3 ls
+$ AWS_PROFILE=jump2 assume-role --role-arn arn:aws:iam::123456789012:role/Developer --serial-number "..." --totp-secret "..." aws s3 ls
 ```
 
 ## Use with envchain
