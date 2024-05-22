@@ -292,9 +292,7 @@ impl<'a> Cli {
 
         if let Some(aws_profile_name) = self.aws_profile.clone() {
             let home_dir = dirs::home_dir().context("Unable to get home directory")?;
-            let path = home_dir
-                .join(".aws/config")
-                .canonicalize();
+            let path = home_dir.join(".aws/config").canonicalize();
             if let Ok(path) = path {
                 return self.serial_number_from_ini(&path, &aws_profile_name);
             }
@@ -305,7 +303,8 @@ impl<'a> Cli {
 
     fn serial_number_from_ini(&self, path: &PathBuf, aws_profile_name: &str) -> Result<String> {
         let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
-        let serial_number = ini.get_from(Some(format!("profile {}", aws_profile_name)), "serial_number")
+        let serial_number = ini
+            .get_from(Some(format!("profile {}", aws_profile_name)), "serial_number")
             .with_context(|| format!("serial_number is missing for profile {}", aws_profile_name))?;
         Ok(serial_number.to_string())
     }

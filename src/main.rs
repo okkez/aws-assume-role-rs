@@ -1,6 +1,6 @@
 use aws_assume_role::cli::Cli;
 use aws_config::BehaviorVersion;
-use aws_runtime::env_config::file::{EnvConfigFiles, EnvConfigFileKind};
+use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_sts as sts;
 use clap::Parser;
 
@@ -19,7 +19,7 @@ async fn main() {
                 .with_file(EnvConfigFileKind::Config, config_path)
                 .build();
             loader.profile_files(profile_files)
-        },
+        }
         Some(_) => loader,
         None => loader,
     };
