@@ -74,6 +74,9 @@ impl StsImpl {
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
+    /// AWS profile name in $HOME/.aws/config
+    #[arg(long)]
+    pub aws_profile: Option<String>,
     /// The profile name
     #[arg(short, long, conflicts_with = "role_arn")]
     profile_name: Option<String>,
@@ -88,7 +91,7 @@ pub struct Cli {
     ///   2. $HOME/.aws/config.toml
     ///   3. $HOME/.aws/config
     #[arg(short, long, verbatim_doc_comment)]
-    config: Option<PathBuf>,
+    pub config: Option<PathBuf>,
 
     /// The duration in seconds of the role session. (900-43200)
     /// The following suffixes are available:
@@ -211,14 +214,12 @@ impl<'a> Cli {
     }
 
     pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
-        let role_arn = self.role_arn().context("Unable to set role_arn")?;
-        let duration_seconds = self.duration;
         let output = (|| async {
             sts.assume_role(
-                Some(role_arn.clone()),
-                Some(duration_seconds),
-                self.serial_number.clone(),
-                Some(self.totp_code().context("Unable to generate TOTP code")?),
+                self.role_arn().ok(),
+                Some(self.duration),
+                self.serial_number().ok(),
+                self.totp_code().ok(),
             )
             .await
             .context("retryable")
@@ -275,6 +276,37 @@ impl<'a> Cli {
             None => println!("Child process terminated by signal"),
         };
         Ok(())
+    }
+
+    fn serial_number(&self) -> Result<String> {
+        if let Some(serial_number) = self.serial_number.clone() {
+            return Ok(serial_number);
+        }
+
+        if let (Some(aws_profile_name), Some(config_path)) = (self.aws_profile.clone(), self.config.clone()) {
+            if config_path.extension() == None {
+                return self.serial_number_from_ini(&config_path, &aws_profile_name);
+            }
+        }
+
+        if let Some(aws_profile_name) = self.aws_profile.clone() {
+            let home_dir = dirs::home_dir().context("Unable to get home directory")?;
+            let path = home_dir
+                .join(".aws/config")
+                .canonicalize();
+            if let Ok(path) = path {
+                return self.serial_number_from_ini(&path, &aws_profile_name);
+            }
+        }
+
+        bail!("Unable to get serial number");
+    }
+
+    fn serial_number_from_ini(&self, path: &PathBuf, aws_profile_name: &str) -> Result<String> {
+        let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
+        let serial_number = ini.get_from(Some(format!("profile {}", aws_profile_name)), "serial_number")
+            .with_context(|| format!("serial_number is missing for profile {}", aws_profile_name))?;
+        Ok(serial_number.to_string())
     }
 
     fn totp_code(&self) -> Result<String> {

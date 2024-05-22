@@ -20,6 +20,7 @@ panic = "abort"
 [dependencies]
 anyhow = { version = "1.0.83", features = ["backtrace"] }
 aws-config = "1.4.0"
+aws-runtime = "1.2.2"
 aws-sdk-sts = "1.24.0"
 backon = "0.4.4"
 chrono = { version = "0.4.38", features = ["serde"] }
