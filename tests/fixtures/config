@@ -1,0 +1,9 @@
+[profile jump]
+region = ap-northeast-1
+serial_number = arn:aws:iam::123456789012:mfa/serialnumber
+
+[profile test]
+role_arn = arn:aws:iam::987654321234:role/TestUser
+
+[profile admin]
+role_arn = arn:aws:iam::987654321234:role/AdminUser
