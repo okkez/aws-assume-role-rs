@@ -52,19 +52,19 @@ impl StsImpl {
     #[allow(dead_code)]
     pub async fn assume_role(
         &self,
-        role_arn: String,
-        duration_seconds: i32,
-        serial_number: String,
-        token_code: String,
+        role_arn: Option<String>,
+        duration_seconds: Option<i32>,
+        serial_number: Option<String>,
+        token_code: Option<String>,
     ) -> Result<AssumeRoleOutput> {
         let now = Local::now().timestamp_millis();
         self.inner
             .assume_role()
-            .role_session_name(format!("{}-session", now))
-            .role_arn(role_arn)
-            .duration_seconds(duration_seconds)
-            .serial_number(serial_number)
-            .token_code(token_code)
+            .set_role_session_name(Some(format!("{}-session", now)))
+            .set_role_arn(role_arn)
+            .set_duration_seconds(duration_seconds)
+            .set_serial_number(serial_number)
+            .set_token_code(token_code)
             .send()
             .await
             .context("Failed to call assume_role")
@@ -101,7 +101,7 @@ pub struct Cli {
 
     /// MFA device ARN such as arn:aws:iam::123456789012/mfa/user
     #[arg(short = 'n', long, env)]
-    serial_number: String,
+    serial_number: Option<String>,
 
     #[command(flatten)]
     totp_args: TotpArgs,
@@ -215,10 +215,10 @@ impl<'a> Cli {
         let duration_seconds = self.duration;
         let output = (|| async {
             sts.assume_role(
-                role_arn.clone(),
-                duration_seconds,
+                Some(role_arn.clone()),
+                Some(duration_seconds),
                 self.serial_number.clone(),
-                self.totp_code().context("Unable to generate TOTP code")?,
+                Some(self.totp_code().context("Unable to generate TOTP code")?),
             )
             .await
             .context("retryable")
@@ -465,10 +465,10 @@ mod tests {
         let mut mock = MockStsImpl::default();
         mock.expect_assume_role()
             .with(
-                eq("test-role".to_string()),
-                eq(3600),
-                eq("test_serial_number".to_string()),
-                eq("123456".to_string()),
+                eq(Some("test-role".to_string())),
+                eq(Some(3600)),
+                eq(Some("test_serial_number".to_string())),
+                eq(Some("123456".to_string())),
             )
             .return_once(|role, _duration, _, _| {
                 let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
@@ -480,7 +480,7 @@ mod tests {
                 Ok(AssumeRoleOutput::builder()
                     .assumed_role_user(
                         AssumedRoleUser::builder()
-                            .assumed_role_id(role)
+                            .assumed_role_id(role.unwrap())
                             .arn("arn:iam:::user/test-assumed-user")
                             .build()
                             .context("failed to build AssumedRoleUser")?,
@@ -523,10 +523,10 @@ mod tests {
         let mut mock = MockStsImpl::default();
         mock.expect_assume_role()
             .with(
-                eq("arn:aws:iam::987654321234:role/TestUser".to_string()),
-                eq(3600 * 12),
-                eq("test_serial_number".to_string()),
-                eq("123456".to_string()),
+                eq(Some("arn:aws:iam::987654321234:role/TestUser".to_string())),
+                eq(Some(3600 * 12)),
+                eq(Some("test_serial_number".to_string())),
+                eq(Some("123456".to_string())),
             )
             .return_once(|role, _duration, _, _| {
                 let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
@@ -538,7 +538,7 @@ mod tests {
                 Ok(AssumeRoleOutput::builder()
                     .assumed_role_user(
                         AssumedRoleUser::builder()
-                            .assumed_role_id(role)
+                            .assumed_role_id(role.unwrap())
                             .arn("arn:iam:::user/test-assumed-user")
                             .build()
                             .context("failed to build AssumedRoleUser")?,
