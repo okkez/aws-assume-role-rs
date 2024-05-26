@@ -1,4 +1,6 @@
-use aws_assume_role::cli::Cli;
+mod cli;
+
+use crate::cli::Cli;
 use aws_config::BehaviorVersion;
 use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_sts as sts;

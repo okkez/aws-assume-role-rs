@@ -40,9 +40,6 @@ totp-rs = "5.5.1"
 name = "assume-role"
 path = "src/main.rs"
 
-[lib]
-name = "aws_assume_role"
-
 [dev-dependencies]
 assert_cmd = "2.0.14"
 pretty_assertions = "1.4.0"
