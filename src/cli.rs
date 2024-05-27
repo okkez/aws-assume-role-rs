@@ -124,7 +124,7 @@ pub struct Cli {
 }
 
 #[derive(Args)]
-#[group(required = true, multiple = false)]
+#[group(required = false, multiple = false)]
 struct TotpArgs {
     /// The base32 format TOTP secret
     #[arg(short = 's', long, env)]
