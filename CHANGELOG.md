@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.4...v0.1.5) - 2024-05-27
+
+### Added
+- improve arguments validation
+- relax totp args to make it easy in shell script
+
 ## [0.1.4](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.3...v0.1.4) - 2024-05-26
 
 ### Added
