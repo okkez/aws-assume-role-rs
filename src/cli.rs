@@ -2,7 +2,8 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use aws_sdk_sts as sts;
 use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
-use clap::{Args, Parser, ValueEnum};
+use clap::error::ErrorKind;
+use clap::{Args, CommandFactory, Parser, ValueEnum};
 use ini::Ini;
 use regex::Regex;
 use serde::Deserialize;
@@ -182,6 +183,37 @@ struct Item {
 }
 
 impl<'a> Cli {
+    pub fn validate_arguments(&self) -> Result<(), clap::Error> {
+        if self.aws_profile.is_none()
+            && self.config.is_none()
+            && self.profile_name.is_none()
+            && self.role_arn.is_none()
+            && self.serial_number.is_none()
+            && self.totp_args.totp_code.is_none()
+            && self.totp_args.totp_secret.is_none()
+        {
+            let mut cmd = Self::command();
+            let err = cmd
+                .error(ErrorKind::MissingRequiredArgument, "Required arguments are missing")
+                .apply();
+            Err(err)
+        } else if self.serial_number.is_some()
+            && self.totp_args.totp_code.is_none()
+            && self.totp_args.totp_secret.is_none()
+        {
+            let mut cmd = Self::command();
+            let err = cmd
+                .error(
+                    ErrorKind::MissingRequiredArgument,
+                    "Require one of --totp-code or --totp-secret if set --serial-number-",
+                )
+                .apply();
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn execute(&self, sts_client: sts::Client) -> Result<()> {
         let sts = Sts::new(sts_client);
         if self.verbose {

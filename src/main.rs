@@ -7,6 +7,9 @@ use clap::Parser;
 #[::tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    if let Err(e) = cli.validate_arguments() {
+        e.exit();
+    }
 
     let loader = aws_config::defaults(BehaviorVersion::latest());
     let loader = match cli.aws_profile.clone() {
