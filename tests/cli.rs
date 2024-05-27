@@ -10,8 +10,9 @@ fn verify_cli() {
 
 #[test]
 fn no_arguments() {
-    let cli = Cli::try_parse_from(["assume-role"]);
-    assert!(!cli.is_ok());
+    let cli = Cli::parse_from(["assume-role"]);
+    let r = cli.validate_arguments();
+    assert!(!r.is_ok());
 }
 
 #[rstest]
@@ -19,6 +20,7 @@ fn no_arguments() {
 #[case("--totp-code=123456", true)]
 #[case("--totp-secret=secret", true)]
 fn serial_number(#[case] arg: &str, #[case] success: bool) {
-    let cli = Cli::try_parse_from(["assume-role", "--serial-number=test_serial_number", arg]);
-    assert_eq!(cli.is_ok(), success);
+    let cli = Cli::parse_from(["assume-role", "--serial-number=test_serial_number", arg]);
+    let r = cli.validate_arguments();
+    assert_eq!(r.is_ok(), success);
 }
