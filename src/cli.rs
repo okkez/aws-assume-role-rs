@@ -249,10 +249,10 @@ impl<'a> Cli {
     pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
         let output = (|| async {
             sts.assume_role(
-                self.role_arn().ok(),
+                Some(self.role_arn()?),
                 Some(self.duration),
-                self.serial_number().ok(),
-                self.totp_code().ok(),
+                Some(self.serial_number()?),
+                Some(self.totp_code()?),
             )
             .await
             .context("retryable")
@@ -362,7 +362,7 @@ impl<'a> Cli {
         match &self.profile_name {
             Some(name) => match config.profile.get(name) {
                 Some(profile) => Ok(profile.role_arn.clone()),
-                None => Err(anyhow!("{} is not found", name)),
+                None => Err(anyhow!("--role-arn={} is not found", name)),
             },
             None => Ok(self.select_role_arn(&config)),
         }

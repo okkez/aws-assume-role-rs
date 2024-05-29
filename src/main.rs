@@ -2,7 +2,8 @@ use aws_assume_role::cli::Cli;
 use aws_config::BehaviorVersion;
 use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_sts as sts;
-use clap::Parser;
+use clap::error::ErrorKind;
+use clap::{CommandFactory, Parser};
 
 #[::tokio::main]
 async fn main() {
@@ -32,5 +33,8 @@ async fn main() {
         .await;
     let sts = sts::Client::new(&config);
 
-    cli.execute(sts).await.unwrap();
+    if let Err(e) = cli.execute(sts).await {
+        let mut cmd = Cli::command();
+        cmd.error(ErrorKind::Io, e.to_string()).exit();
+    }
 }
