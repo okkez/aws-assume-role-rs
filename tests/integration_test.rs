@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use assert_cmd::Command;
 use aws_sdk_sts as sts;
 use chrono::{DateTime, Utc};
@@ -6,9 +6,9 @@ use regex::Regex;
 use rstest::rstest;
 use serde::Deserialize;
 use std::path::Path;
-use testcontainers::ContainerAsync;
+use testcontainers::{ContainerAsync, RunnableImage};
+use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::localstack::LocalStack;
-use testcontainers_modules::testcontainers::{runners::AsyncRunner, RunnableImage};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -25,15 +25,15 @@ fn make_sts_test_credentials() -> sts::config::Credentials {
 }
 
 #[allow(dead_code)]
-async fn run_localstack() -> ContainerAsync<LocalStack> {
+async fn run_localstack() -> Result<ContainerAsync<LocalStack>> {
     let image = RunnableImage::from(LocalStack).with_env_var(("SERVICES", "sts"));
-    image.start().await
+    image.start().await.context("")
 }
 
 #[allow(dead_code)]
 async fn endpoint_url(container: &ContainerAsync<LocalStack>) -> Result<String> {
-    let host_ip = container.get_host().await;
-    let host_port = container.get_host_port_ipv4(4566).await;
+    let host_ip = container.get_host().await?;
+    let host_port = container.get_host_port_ipv4(4566).await?;
     let endpoint_url = format!("http://{}:{}", host_ip, host_port);
     Ok(endpoint_url)
 }
@@ -66,7 +66,7 @@ fn test_version() {
 #[tokio::test]
 #[ignore]
 async fn format_json() -> Result<()> {
-    let container = run_localstack().await;
+    let container = run_localstack().await?;
     let endpoint_url = endpoint_url(&container).await?;
 
     {
@@ -134,7 +134,7 @@ async fn format_json() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn format_shell(#[case] shell_type: String, #[case] prefix: String) -> Result<()> {
-    let container = run_localstack().await;
+    let container = run_localstack().await?;
     let endpoint_url = endpoint_url(&container).await?;
 
     let assert = Command::cargo_bin("assume-role")

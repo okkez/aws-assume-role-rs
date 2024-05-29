@@ -1058,18 +1058,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dns-lookup"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5766087c2235fec47fafa4cfecc81e494ee679d0fd4a59887ea0919bfb0e4fc"
-dependencies = [
- "cfg-if",
- "libc",
- "socket2",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2630,32 +2618,35 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "testcontainers"
-version = "0.16.7"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69d47265a44d1035a322691cf0a6cc227d79b62ef86ffb0dbc204b394fee3d07"
+checksum = "025e0ac563d543e0354d984540e749859a83dbe5c0afb8d458dc48d91cef2d6a"
 dependencies = [
  "async-trait",
  "bollard",
  "bollard-stubs",
+ "bytes",
  "dirs",
- "dns-lookup",
  "docker_credential",
  "futures",
  "log",
+ "memchr",
  "parse-display",
  "serde",
  "serde_json",
  "serde_with",
+ "thiserror",
  "tokio",
+ "tokio-stream",
  "tokio-util",
  "url",
 ]
 
 [[package]]
 name = "testcontainers-modules"
-version = "0.4.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0faa6265d33090f7238c48d41ec195fab63a66c7997bf58bdce5ce8ab94ea682"
+checksum = "87dc086b8c791e5696de6de4e0d79de2cb9f8a1ac4552d46d6211a42d81d6d0f"
 dependencies = [
  "testcontainers",
 ]
@@ -2808,6 +2799,17 @@ checksum = "775e0c0f0adb3a2f22a00c4745d728b479985fc15ee7ca6a2608388c5569860f"
 dependencies = [
  "rustls 0.22.4",
  "rustls-pki-types",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "267ac89e0bec6e691e5813911606935d77c476ff49024f98abcea3e7b15e37af"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
  "tokio",
 ]
 
