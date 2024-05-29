@@ -6,8 +6,8 @@ use regex::Regex;
 use rstest::rstest;
 use serde::Deserialize;
 use std::path::Path;
-use testcontainers::{ContainerAsync, RunnableImage};
 use testcontainers::runners::AsyncRunner;
+use testcontainers::{ContainerAsync, RunnableImage};
 use testcontainers_modules::localstack::LocalStack;
 
 #[derive(Deserialize)]
