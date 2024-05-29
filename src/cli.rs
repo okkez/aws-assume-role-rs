@@ -80,11 +80,11 @@ pub struct Cli {
     #[arg(long, env)]
     pub aws_profile: Option<String>,
     /// The profile name
-    #[arg(short, long, conflicts_with = "role_arn")]
+    #[arg(short, long)]
     profile_name: Option<String>,
 
     /// The IAM Role ARN to assume
-    #[arg(short, long, env, conflicts_with = "profile_name")]
+    #[arg(short, long, env, conflicts_with_all = ["profile_name", "config"])]
     role_arn: Option<String>,
 
     /// The config file. default: $HOME/.aws/config.toml
