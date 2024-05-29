@@ -51,16 +51,24 @@ async fn make_sts_config(container: &ContainerAsync<LocalStack>) -> Result<sts::
     Ok(config)
 }
 
-#[test]
-fn no_serial_number() {
-    let assert = Command::cargo_bin("assume-role").unwrap().assert();
-    assert.failure().code(2);
-}
-
-#[test]
-fn test_version() {
-    let assert = Command::cargo_bin("assume-role").unwrap().arg("--version").assert();
-    assert.success().code(0);
+#[rstest]
+#[case::version(vec!["--version"], true, 0)]
+#[case::no_arguments(vec![], false, 2)]
+#[case::no_such_profile(
+    vec!["--config", "tests/fixtures/config.toml", "--profile-name", "no_such_profile"], false, 2)]
+#[case::coflict_role_name_and_profile_name(
+    vec!["--profile-name", "test", "--role-arn", "arn:aws:iam..."], false, 2)]
+#[case::conflict_config_and_role_arn(
+    vec!["--config", "tests/fixtures/config.toml", "--role-arn", "arn:aws:iam..."], false, 2)]
+#[case::conflict_totp_secret_and_totp_code(
+    vec!["--role-arn", "arn:aws:iam...", "--totp-secret", "secret", "--totp-code", "123456"], false, 2)]
+fn test_arguments(#[case] args: Vec<&str>, #[case] success: bool, #[case] code: i32) {
+    let assert = Command::cargo_bin("assume-role").unwrap().args(args).assert();
+    if success {
+        assert.success().code(code);
+    } else {
+        assert.failure().code(code);
+    }
 }
 
 #[tokio::test]
