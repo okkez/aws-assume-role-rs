@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.5...v0.1.6) - 2024-06-21
+
+### Added
+- improve arg handling
+- improve error handling
+
+### Fixed
+- *(deps)* update rust crate regex to v1.10.5
+- *(deps)* update rust crate toml to v0.8.14
+- *(deps)* update rust crate aws-sdk-sts to v1.28.0
+- *(lint)* cargo fmt
+
+### Other
+- Merge pull request [#39](https://github.com/okkez/aws-assume-role-rs/pull/39) from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request [#38](https://github.com/okkez/aws-assume-role-rs/pull/38) from okkez/renovate/toml-0.x-lockfile
+- Merge pull request [#35](https://github.com/okkez/aws-assume-role-rs/pull/35) from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request [#34](https://github.com/okkez/aws-assume-role-rs/pull/34) from okkez/renovate/aws-sdk-rust-monorepo
+- *(deps)* update testcontainers-modules to 0.5.0
+- *(deps)* update rust crate testcontainers to 0.17.0
+- organize
+
 ## [0.1.5](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.4...v0.1.5) - 2024-05-27
 
 ### Added
