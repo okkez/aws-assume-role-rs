@@ -570,18 +570,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_assume_role_with_role_only() {
-        let cli = Cli::parse_from([
-            "assume-role",
-            "--role-arn=test-role",
-        ]);
+        let cli = Cli::parse_from(["assume-role", "--role-arn=test-role"]);
         let mut mock = MockStsImpl::default();
         mock.expect_assume_role()
-            .with(
-                eq(Some("test-role".to_string())),
-                eq(Some(3600)),
-                eq(None),
-                eq(None),
-            )
+            .with(eq(Some("test-role".to_string())), eq(Some(3600)), eq(None), eq(None))
             .return_once(|role, _duration, _, _| {
                 let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
                     .unwrap()
