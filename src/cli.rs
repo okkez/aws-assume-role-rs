@@ -251,8 +251,8 @@ impl<'a> Cli {
             sts.assume_role(
                 Some(self.role_arn()?),
                 Some(self.duration),
-                Some(self.serial_number()?),
-                Some(self.totp_code()?),
+                self.serial_number().ok(),
+                self.totp_code().ok(),
             )
             .await
             .context("retryable")
@@ -532,6 +532,55 @@ mod tests {
                 eq(Some(3600)),
                 eq(Some("test_serial_number".to_string())),
                 eq(Some("123456".to_string())),
+            )
+            .return_once(|role, _duration, _, _| {
+                let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
+                    .unwrap()
+                    .to_utc()
+                    .timestamp();
+                let expiration = sts::primitives::DateTime::from_secs(timestamp);
+
+                Ok(AssumeRoleOutput::builder()
+                    .assumed_role_user(
+                        AssumedRoleUser::builder()
+                            .assumed_role_id(role.unwrap())
+                            .arn("arn:iam:::user/test-assumed-user")
+                            .build()
+                            .context("failed to build AssumedRoleUser")?,
+                    )
+                    .credentials(
+                        sts::types::Credentials::builder()
+                            .access_key_id("test_access_key_id")
+                            .secret_access_key("test_secret_access_key")
+                            .session_token("test_session_token")
+                            .expiration(expiration)
+                            .build()
+                            .context("Failed to build Credentials")?,
+                    )
+                    .build())
+            });
+
+        let result = cli.assume_role(&mock).await;
+        assert!(result.is_ok());
+        let credentials = result.unwrap();
+        assert_eq!("test_access_key_id", credentials.access_key_id());
+        assert_eq!("test_secret_access_key", credentials.secret_access_key());
+        assert_eq!("test_session_token", credentials.session_token());
+    }
+
+    #[tokio::test]
+    async fn test_assume_role_with_role_only() {
+        let cli = Cli::parse_from([
+            "assume-role",
+            "--role-arn=test-role",
+        ]);
+        let mut mock = MockStsImpl::default();
+        mock.expect_assume_role()
+            .with(
+                eq(Some("test-role".to_string())),
+                eq(Some(3600)),
+                eq(None),
+                eq(None),
             )
             .return_once(|role, _duration, _, _| {
                 let timestamp = DateTime::parse_from_rfc3339("2024-05-15T20:00:00Z")
