@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.6...v0.1.7) - 2024-08-09
+
+### Other
+- Merge pull request [#58](https://github.com/okkez/aws-assume-role-rs/pull/58) from okkez/set-role-arn
+- Merge pull request [#51](https://github.com/okkez/aws-assume-role-rs/pull/51) from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request [#56](https://github.com/okkez/aws-assume-role-rs/pull/56) from okkez/renovate/mockall-0.x
+
 ## [0.1.6](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.5...v0.1.6) - 2024-06-28
 
 ### Added
