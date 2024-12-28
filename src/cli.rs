@@ -418,7 +418,7 @@ impl<'a> Cli {
     #[cfg(not(test))]
     fn select_role_arn(&self, config: &Config) -> String {
         let options = SkimOptionsBuilder::default()
-            .bind(vec!["Enter::accept"])
+            .bind(vec!["Enter::accept".to_string()])
             .build()
             .unwrap();
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
