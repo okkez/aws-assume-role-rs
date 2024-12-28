@@ -22,7 +22,7 @@ anyhow = { version = "1.0.83", features = ["backtrace"] }
 aws-config = "1.4.0"
 aws-runtime = "1.2.2"
 aws-sdk-sts = "1.24.0"
-backon = "0.4.4"
+backon = "0.5.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4", features = ["derive", "wrap_help", "env"] }
 dirs = "5.0.1"
