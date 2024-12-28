@@ -6,4 +6,10 @@
   "timezone": "Asia/Tokyo",
   "schedule": "before 5am",
   "labels": ["renovate"],
+  "packageRules": [
+    {
+      "groupName": "testcontainers",
+      "matchPackageNames": ["/^testcontainers$/", "/^testcontainers-modules$/"],
+    }
+  ]
 }
