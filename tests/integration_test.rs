@@ -6,9 +6,10 @@ use regex::Regex;
 use rstest::rstest;
 use serde::Deserialize;
 use std::path::Path;
-use testcontainers::runners::AsyncRunner;
-use testcontainers::{ContainerAsync, RunnableImage};
-use testcontainers_modules::localstack::LocalStack;
+use testcontainers_modules::{
+    localstack::LocalStack,
+    testcontainers::{core::ContainerAsync, runners::AsyncRunner, ImageExt},
+};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -26,7 +27,7 @@ fn make_sts_test_credentials() -> sts::config::Credentials {
 
 #[allow(dead_code)]
 async fn run_localstack() -> Result<ContainerAsync<LocalStack>> {
-    let image = RunnableImage::from(LocalStack).with_env_var(("SERVICES", "sts"));
+    let image = LocalStack::default().with_env_var("SERVICES", "sts");
     image.start().await.context("")
 }
 
