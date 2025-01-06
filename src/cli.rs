@@ -4,6 +4,7 @@ use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
 use clap::error::ErrorKind;
 use clap::{Args, CommandFactory, Parser, ValueEnum};
+use core::cmp::Ordering;
 use ini::Ini;
 use regex::Regex;
 use serde::Deserialize;
@@ -220,15 +221,53 @@ impl<'a> Cli {
             println!("{}", self.get_caller_identity(&sts).await?);
         }
 
-        let credentials = self.assume_role(&sts).await?;
-        let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
-            .context("Unable to built DateTime")?;
-        let envs = HashMap::from([
-            ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-            ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
-            ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-            ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
-        ]);
+        cache_vault::init().await?;
+
+        let caller_arn = self.caller_arn(&sts).await?;
+        let role_arn = self.role_arn()?;
+        let key = format!("{} {}", caller_arn, role_arn);
+
+        let now = chrono::Utc::now().naive_utc();
+        let found = match cache_vault::fetch("assume-role-rs", &key).await {
+            Err(_e) => None,
+            Ok((_json, None)) => None,
+            Ok((json, Some(expired_at))) => match now.cmp(&expired_at) {
+                Ordering::Greater | Ordering::Equal => None,
+                Ordering::Less => Some(json),
+            }
+        };
+
+        let json_string;
+        let envs = match found {
+            Some(json) => {
+                json_string = json.to_owned();
+                serde_json::from_str(&json_string).unwrap()
+            },
+            None => {
+                let credentials = self.assume_role(&sts, &role_arn).await?;
+                let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
+                    .context("Unable to built DateTime")?;
+                let envs = HashMap::from([
+                    ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
+                    ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
+                    ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
+                    ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
+                ]);
+                let json = serde_json::to_string(&envs)?;
+                let response = cache_vault::save(
+                    "assume-role-rs",
+                    &key,
+                    &json,
+                    None,
+                    Some(dt.naive_utc()),
+                ).await.context("Unable to save cache");
+                if let Err(err) = response {
+                    dbg!(err);
+                }
+                envs
+            }
+        };
+
         match &self.format {
             Some(format) => println!("{}", self.output(format, &envs)?),
             None => self.exec_command(&envs)?,
@@ -246,10 +285,10 @@ impl<'a> Cli {
         ))
     }
 
-    pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
+    pub async fn assume_role(&self, sts: &Sts, role_arn: &str) -> Result<sts::types::Credentials> {
         let output = (|| async {
             sts.assume_role(
-                Some(self.role_arn()?),
+                Some(String::from(role_arn)),
                 Some(self.duration),
                 self.serial_number().ok(),
                 self.totp_code().ok(),
@@ -258,12 +297,22 @@ impl<'a> Cli {
             .context("retryable")
         })
         .retry(&ExponentialBuilder::default())
-        .when(|e| e.to_string() == "retryable")
+        .when(|e| {
+            if let Some(source) = e.source() {
+                dbg!(source);
+            }
+            e.to_string() == "retryable"
+        })
         .await?;
         match output.credentials() {
             Some(credentials) => Ok(credentials.clone()),
             None => bail!("Unable to fetch temporary credentials"),
         }
+    }
+
+    async fn caller_arn(&self, sts: &Sts) -> Result<String> {
+        let response = sts.get_caller_identity().await?;
+        Ok(String::from(response.arn().unwrap_or_default()))
     }
 
     fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<String> {
