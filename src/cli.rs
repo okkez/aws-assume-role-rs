@@ -666,6 +666,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
+    #[tracing_test::traced_test]
     async fn test_assume_role_with_config_file(#[files("tests/fixtures/*")] path: PathBuf) {
         let cli = Cli::parse_from([
             "assume-role",
@@ -713,8 +714,8 @@ mod tests {
             });
 
         let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
-        dbg!(&result);
-        debug_assert!(result.is_ok());
+        tracing::debug!("{:?}", &result);
+        assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
@@ -723,6 +724,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
+    #[tracing_test::traced_test]
     async fn test_assume_role_with_aws_profile(#[files("tests/fixtures/config")] path: PathBuf) {
         let cli = Cli::parse_from([
             "assume-role",
@@ -770,8 +772,8 @@ mod tests {
             });
 
         let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
-        dbg!(&result);
-        debug_assert!(result.is_ok());
+        tracing::debug!("{:?}", &result);
+        assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
