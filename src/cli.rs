@@ -4,6 +4,7 @@ use backon::{ExponentialBuilder, Retryable};
 use chrono::{DateTime, Local, SecondsFormat};
 use clap::error::ErrorKind;
 use clap::{Args, CommandFactory, Parser, ValueEnum};
+use core::cmp::Ordering;
 use ini::Ini;
 use regex::Regex;
 use serde::Deserialize;
@@ -18,6 +19,7 @@ use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 use totp_rs::{Algorithm, Secret, TOTP};
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[allow(unused_imports)]
 use mockall::automock;
@@ -215,20 +217,63 @@ impl<'a> Cli {
     }
 
     pub async fn execute(&self, sts_client: sts::Client) -> Result<()> {
-        let sts = Sts::new(sts_client);
+        let subscriber = tracing_subscriber::fmt();
+        let filter = tracing_subscriber::EnvFilter::from_default_env();
         if self.verbose {
-            println!("{}", self.get_caller_identity(&sts).await?);
+            subscriber.with_env_filter(filter).pretty().finish().init();
+        } else {
+            subscriber.with_env_filter(filter).finish().init();
         }
 
-        let credentials = self.assume_role(&sts).await?;
-        let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
-            .context("Unable to built DateTime")?;
-        let envs = HashMap::from([
-            ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
-            ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
-            ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
-            ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
-        ]);
+        let sts = Sts::new(sts_client);
+        if self.verbose {
+            tracing::debug!("{}", self.get_caller_identity(&sts).await?);
+        }
+
+        cache_vault::init().await?;
+
+        let caller_arn = self.caller_arn(&sts).await?;
+        let role_arn = self.role_arn()?;
+        let key = format!("{} {}", caller_arn, role_arn);
+
+        let now = chrono::Utc::now().naive_utc();
+        let found = match cache_vault::fetch("assume-role-rs", &key).await {
+            Err(_e) => None,
+            Ok((_json, None)) => None,
+            Ok((json, Some(expired_at))) => match now.cmp(&expired_at) {
+                Ordering::Greater | Ordering::Equal => None,
+                Ordering::Less => Some(json),
+            },
+        };
+
+        let json_string;
+        let envs = match found {
+            Some(json) => {
+                json_string = json.to_owned();
+                serde_json::from_str(&json_string).unwrap()
+            }
+            None => {
+                let credentials = self.assume_role(&sts, &role_arn).await?;
+                let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
+                    .context("Unable to built DateTime")?;
+                let envs = HashMap::from([
+                    ("AWS_ACCESS_KEY_ID", credentials.access_key_id.clone()),
+                    ("AWS_SECRET_ACCESS_KEY", credentials.secret_access_key.clone()),
+                    ("AWS_SESSION_TOKEN", credentials.session_token.clone()),
+                    ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
+                ]);
+                let json = serde_json::to_string(&envs)?;
+                let response = cache_vault::save("assume-role-rs", &key, &json, None, Some(dt.naive_utc()))
+                    .await
+                    .context("Unable to save cache");
+                if let Err(err) = response {
+                    // ignore the error when caching failed
+                    tracing::debug!("{}", err);
+                }
+                envs
+            }
+        };
+
         match &self.format {
             Some(format) => println!("{}", self.output(format, &envs)?),
             None => self.exec_command(&envs)?,
@@ -246,10 +291,10 @@ impl<'a> Cli {
         ))
     }
 
-    pub async fn assume_role(&self, sts: &Sts) -> Result<sts::types::Credentials> {
+    pub async fn assume_role(&self, sts: &Sts, role_arn: &str) -> Result<sts::types::Credentials> {
         let output = (|| async {
             sts.assume_role(
-                Some(self.role_arn()?),
+                Some(String::from(role_arn)),
                 Some(self.duration),
                 self.serial_number().ok(),
                 self.totp_code().ok(),
@@ -258,12 +303,22 @@ impl<'a> Cli {
             .context("retryable")
         })
         .retry(&ExponentialBuilder::default())
-        .when(|e| e.to_string() == "retryable")
+        .when(|e| {
+            if let Some(source) = e.source() {
+                tracing::debug!(error = ?source, "Role assumption failed, will retry");
+            }
+            e.to_string() == "retryable"
+        })
         .await?;
         match output.credentials() {
             Some(credentials) => Ok(credentials.clone()),
             None => bail!("Unable to fetch temporary credentials"),
         }
+    }
+
+    async fn caller_arn(&self, sts: &Sts) -> Result<String> {
+        let response = sts.get_caller_identity().await?;
+        Ok(String::from(response.arn().unwrap_or_default()))
     }
 
     fn output(&self, format: &Format, envs: &HashMap<&str, String>) -> Result<String> {
@@ -306,7 +361,7 @@ impl<'a> Cli {
         let status = child.wait().context("Fail waiting child process")?;
         match status.code() {
             Some(code) => ::std::process::exit(code),
-            None => println!("Child process terminated by signal"),
+            None => tracing::info!("Child process terminated by signal"),
         };
         Ok(())
     }
@@ -560,7 +615,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "test-role").await;
         assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
@@ -601,7 +656,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "test-role").await;
         assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
@@ -611,6 +666,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
+    #[tracing_test::traced_test]
     async fn test_assume_role_with_config_file(#[files("tests/fixtures/*")] path: PathBuf) {
         let cli = Cli::parse_from([
             "assume-role",
@@ -657,9 +713,9 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
-        dbg!(&result);
-        debug_assert!(result.is_ok());
+        let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
+        tracing::debug!("{:?}", &result);
+        assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
@@ -668,6 +724,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
+    #[tracing_test::traced_test]
     async fn test_assume_role_with_aws_profile(#[files("tests/fixtures/config")] path: PathBuf) {
         let cli = Cli::parse_from([
             "assume-role",
@@ -714,9 +771,9 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
-        dbg!(&result);
-        debug_assert!(result.is_ok());
+        let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
+        tracing::debug!("{:?}", &result);
+        assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());

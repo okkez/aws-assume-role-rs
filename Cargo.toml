@@ -23,6 +23,7 @@ aws-config = "1.4.0"
 aws-runtime = "1.2.2"
 aws-sdk-sts = "1.24.0"
 backon = "1.0.0"
+cache-vault = { git = "https://github.com/okkez/cache-vault", version = "0.1" }
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4", features = ["derive", "wrap_help", "env"] }
 dirs = "5.0.1"
@@ -35,6 +36,8 @@ skim = "0.15.0"
 tokio = { version = "1.37.0", features = ["full"] }
 toml = "0.8.12"
 totp-rs = "5.5.1"
+tracing = "0.1.0"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [[bin]]
 name = "assume-role"
@@ -49,3 +52,4 @@ pretty_assertions = "1.4.0"
 rstest = "0.24.0"
 testcontainers = { version = "0.23.0" }
 testcontainers-modules = { version = "0.11.0", features = ["localstack"] }
+tracing-test = "0.2"
