@@ -19,6 +19,7 @@ use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 use totp_rs::{Algorithm, Secret, TOTP};
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[allow(unused_imports)]
 use mockall::automock;
@@ -216,9 +217,17 @@ impl<'a> Cli {
     }
 
     pub async fn execute(&self, sts_client: sts::Client) -> Result<()> {
+        let subscriber = tracing_subscriber::fmt();
+        let filter = tracing_subscriber::EnvFilter::from_default_env();
+        if self.verbose {
+            subscriber.with_env_filter(filter).pretty().finish().init();
+        } else {
+            subscriber.with_env_filter(filter).finish().init();
+        }
+
         let sts = Sts::new(sts_client);
         if self.verbose {
-            println!("{}", self.get_caller_identity(&sts).await?);
+            tracing::debug!("{}", self.get_caller_identity(&sts).await?);
         }
 
         cache_vault::init().await?;
@@ -234,7 +243,7 @@ impl<'a> Cli {
             Ok((json, Some(expired_at))) => match now.cmp(&expired_at) {
                 Ordering::Greater | Ordering::Equal => None,
                 Ordering::Less => Some(json),
-            }
+            },
         };
 
         let json_string;
@@ -242,7 +251,7 @@ impl<'a> Cli {
             Some(json) => {
                 json_string = json.to_owned();
                 serde_json::from_str(&json_string).unwrap()
-            },
+            }
             None => {
                 let credentials = self.assume_role(&sts, &role_arn).await?;
                 let dt = DateTime::from_timestamp_millis(credentials.expiration().to_millis()?)
@@ -254,15 +263,11 @@ impl<'a> Cli {
                     ("AWS_EXPIRATION", dt.to_rfc3339_opts(SecondsFormat::Millis, false)),
                 ]);
                 let json = serde_json::to_string(&envs)?;
-                let response = cache_vault::save(
-                    "assume-role-rs",
-                    &key,
-                    &json,
-                    None,
-                    Some(dt.naive_utc()),
-                ).await.context("Unable to save cache");
+                let response = cache_vault::save("assume-role-rs", &key, &json, None, Some(dt.naive_utc()))
+                    .await
+                    .context("Unable to save cache");
                 if let Err(err) = response {
-                    dbg!(err);
+                    tracing::debug!("{}", err);
                 }
                 envs
             }
@@ -299,7 +304,7 @@ impl<'a> Cli {
         .retry(&ExponentialBuilder::default())
         .when(|e| {
             if let Some(source) = e.source() {
-                dbg!(source);
+                tracing::debug!("{:?}", source);
             }
             e.to_string() == "retryable"
         })
@@ -355,7 +360,7 @@ impl<'a> Cli {
         let status = child.wait().context("Fail waiting child process")?;
         match status.code() {
             Some(code) => ::std::process::exit(code),
-            None => println!("Child process terminated by signal"),
+            None => tracing::info!("Child process terminated by signal"),
         };
         Ok(())
     }
