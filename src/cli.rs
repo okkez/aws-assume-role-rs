@@ -267,6 +267,7 @@ impl<'a> Cli {
                     .await
                     .context("Unable to save cache");
                 if let Err(err) = response {
+                    // ignore the error when caching failed
                     tracing::debug!("{}", err);
                 }
                 envs
@@ -614,7 +615,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "test-role").await;
         assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
@@ -655,7 +656,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "test-role").await;
         assert!(result.is_ok());
         let credentials = result.unwrap();
         assert_eq!("test_access_key_id", credentials.access_key_id());
@@ -711,7 +712,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
         dbg!(&result);
         debug_assert!(result.is_ok());
         let credentials = result.unwrap();
@@ -768,7 +769,7 @@ mod tests {
                     .build())
             });
 
-        let result = cli.assume_role(&mock).await;
+        let result = cli.assume_role(&mock, "arn:aws:iam::987654321234:role/TestUser").await;
         dbg!(&result);
         debug_assert!(result.is_ok());
         let credentials = result.unwrap();
