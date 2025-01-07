@@ -305,7 +305,7 @@ impl<'a> Cli {
         .retry(&ExponentialBuilder::default())
         .when(|e| {
             if let Some(source) = e.source() {
-                tracing::debug!("{:?}", source);
+                tracing::debug!(error = ?source, "Role assumption failed, will retry");
             }
             e.to_string() == "retryable"
         })
