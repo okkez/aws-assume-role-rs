@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.7...v0.2.0) - 2025-01-07
+
+### Added
+
+- use tracing crate for logging
+- use cache-vault
+
+### Fixed
+
+- log format
+- to update skim v0.15.0
+- *(deps)* update rust crate serde to v1.0.217
+- *(deps)* update rust crate tokio to v1.42.0
+
+### Other
+
+- Merge pull request [#83](https://github.com/okkez/aws-assume-role-rs/pull/83) from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request [#84](https://github.com/okkez/aws-assume-role-rs/pull/84) from okkez/use-cache-vault
+- use tracing_test
+- follow previous changes
+- Merge pull request [#81](https://github.com/okkez/aws-assume-role-rs/pull/81) from okkez/renovate/testcontainers
+- update testcontainers
+- *(deps)* update testcontainers
+- Merge pull request [#77](https://github.com/okkez/aws-assume-role-rs/pull/77) from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request [#73](https://github.com/okkez/aws-assume-role-rs/pull/73) from okkez/renovate/backon-0.x
+- Merge pull request [#63](https://github.com/okkez/aws-assume-role-rs/pull/63) from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request [#64](https://github.com/okkez/aws-assume-role-rs/pull/64) from okkez/renovate/clap-4.x-lockfile
+- Merge pull request [#70](https://github.com/okkez/aws-assume-role-rs/pull/70) from okkez/renovate/chrono-0.x-lockfile
+- Merge pull request [#62](https://github.com/okkez/aws-assume-role-rs/pull/62) from okkez/renovate/rstest-0.x
+
 ## [0.1.7](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.6...v0.1.7) - 2024-08-09
 
 ### Other
