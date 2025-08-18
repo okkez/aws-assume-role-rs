@@ -1,4 +1,82 @@
 # Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.1](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.0...v0.2.1) - 2025-08-18
+
+### Fixed
+
+- *(deps)* update rust crate clap to v4.5.45
+- *(deps)* update rust crate tokio to v1.47.1
+- *(deps)* update rust crate toml to v0.9.4
+- *(deps)* update rust crate toml to v0.9.3
+- *(deps)* update rust crate serde_json to v1.0.141
+- *(deps)* update rust crate clap to v4.5.41
+- *(deps)* update rust crate skim to 0.20.0
+- *(deps)* update rust crate clap to v4.5.40
+- *(deps)* update rust crate toml to v0.8.23
+- *(deps)* update rust crate clap to v4.5.39
+- *(deps)* update rust crate skim to 0.17.0
+- *(deps)* update rust crate anyhow to v1.0.97
+- *(deps)* update rust crate chrono to v0.4.40
+- *(deps)* update rust crate serde to v1.0.218
+- *(deps)* update rust crate clap to v4.5.30
+- *(deps)* update rust crate skim to 0.16.0
+
+### Other
+
+- *(deps)* update taiki-e/install-action action to v2.58.17
+- Merge pull request #155 from okkez/renovate/skim-0.x-lockfile
+- Merge pull request #156 from okkez/renovate/taiki-e-setup-cross-toolchain-action-1.x
+- Merge pull request #154 from okkez/renovate/actions-create-github-app-token-2.x
+- Merge pull request #157 from okkez/renovate/actions-checkout-4.x
+- *(deps)* update taiki-e/install-action action to v2.58.10
+- *(deps)* update taiki-e/install-action action to v2.57.8
+- Merge pull request #149 from okkez/renovate/skim-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.57.6
+- Merge pull request #144 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #138 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #139 from okkez/renovate/skim-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.57.1
+- Merge pull request #131 from okkez/renovate/toml-0.x-lockfile
+- Merge pull request #127 from okkez/renovate/rust-ini-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.56.24
+- Merge pull request #128 from okkez/renovate/tokio-1.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.56.23
+- Pin actions
+- Merge pull request #126 from okkez/renovate/skim-0.x-lockfile
+- Merge pull request #130 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #120 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #118 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #119 from okkez/renovate/testcontainers
+- Merge pull request #122 from okkez/renovate/skim-0.x
+- Merge pull request #108 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #116 from okkez/renovate/totp-rs-5.x-lockfile
+- Merge pull request #112 from okkez/renovate/chrono-0.x-lockfile
+- Merge pull request #105 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #111 from okkez/renovate/anyhow-1.x-lockfile
+- Merge pull request #110 from okkez/renovate/assert_cmd-2.x-lockfile
+- Merge pull request #107 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #113 from okkez/renovate/toml-0.x-lockfile
+- *(deps)* update testcontainers
+- Merge pull request #103 from okkez/renovate/serde_json-1.x-lockfile
+- Merge pull request #102 from okkez/renovate/rstest-0.x
+- Merge pull request #106 from okkez/renovate/serde-monorepo
+- *(deps)* update actions/create-github-app-token action to v2
+- Merge pull request #99 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #86 from okkez/renovate/testcontainers
+- Merge pull request #90 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #91 from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request #89 from okkez/renovate/tokio-tracing-monorepo
+- Merge pull request #94 from okkez/renovate/toml-0.x-lockfile
+- Merge pull request #95 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #88 from okkez/renovate/serde_json-1.x-lockfile
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
