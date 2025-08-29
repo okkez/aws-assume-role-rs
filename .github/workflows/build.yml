@@ -32,7 +32,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install tools
-        uses: taiki-e/install-action@bb5b6ec0fe226d4254f80ec39794c3a8c1b6525f # v2.58.25
+        uses: taiki-e/install-action@020705266844b275b711684191e11281be48860c # v2.58.27
         with:
           tool: cargo-binstall,cargo-nextest
 
