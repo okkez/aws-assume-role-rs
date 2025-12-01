@@ -50,6 +50,6 @@ name = "aws_assume_role"
 assert_cmd = "2.0.14"
 pretty_assertions = "1.4.0"
 rstest = "0.26.0"
-testcontainers = { version = "0.25.0" }
-testcontainers-modules = { version = "0.13.0", features = ["localstack"] }
+testcontainers = { version = "0.26.0" }
+testcontainers-modules = { version = "0.14.0", features = ["localstack"] }
 tracing-test = "0.2"
