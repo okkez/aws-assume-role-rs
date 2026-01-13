@@ -6,6 +6,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.0...v0.2.1) - 2026-01-13
+
+### Fixed
+
+- *(deps)* update rust crate toml to v0.9.7
+- *(deps)* update rust crate toml to v0.9.6
+- *(deps)* update rust crate clap to v4.5.45
+- *(deps)* update rust crate tokio to v1.47.1
+- *(deps)* update rust crate toml to v0.9.4
+- *(deps)* update rust crate toml to v0.9.3
+- *(deps)* update rust crate serde_json to v1.0.141
+- *(deps)* update rust crate clap to v4.5.41
+- *(deps)* update rust crate skim to 0.20.0
+- *(deps)* update rust crate clap to v4.5.40
+- *(deps)* update rust crate toml to v0.8.23
+- *(deps)* update rust crate clap to v4.5.39
+- *(deps)* update rust crate skim to 0.17.0
+- *(deps)* update rust crate anyhow to v1.0.97
+- *(deps)* update rust crate chrono to v0.4.40
+- *(deps)* update rust crate serde to v1.0.218
+- *(deps)* update rust crate clap to v4.5.30
+- *(deps)* update rust crate skim to 0.16.0
+
+### Other
+
+- Merge pull request #241 from okkez/renovate/serde_json-1.x-lockfile
+- Merge pull request #244 from okkez/renovate/assert_cmd-2.x-lockfile
+- Merge pull request #231 from okkez/renovate/tokio-tracing-monorepo
+- *(deps)* update rust crate toml to v0.9.11
+- *(deps)* update taiki-e/install-action action to v2.65.15
+- Merge pull request #237 from okkez/renovate/marcoieni-release-plz-action-0.x
+- *(deps)* update taiki-e/install-action action to v2.62.64
+- Merge pull request #234 from okkez/renovate/taiki-e-install-action-2.x
+- *(deps)* update taiki-e/install-action action to v2.62.62
+- *(deps)* update taiki-e/install-action action to v2.62.60
+- Merge pull request #222 from okkez/renovate/actions-checkout-6.x
+- Merge pull request #224 from okkez/renovate/actions-create-github-app-token-2.x
+- Merge pull request #227 from okkez/renovate/swatinem-rust-cache-2.x
+- *(deps)* update taiki-e/install-action action to v2.62.58
+- *(deps)* update taiki-e/install-action action to v2.62.57
+- Merge pull request #218 from okkez/renovate/taiki-e-install-action-2.x
+- *(deps)* update actions/checkout action to v5.0.1
+- *(deps)* update rust crate serde to v1.0.228
+- Merge pull request #215 from okkez/renovate/clap-4.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.62.49
+- Merge pull request #208 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #203 from okkez/renovate/toml-0.x-lockfile
+- Merge pull request #202 from okkez/renovate/regex-1.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.62.45
+- *(deps)* update rust crate testcontainers to v0.25.2
+- *(deps)* update taiki-e/install-action action to v2.62.38
+- *(deps)* update taiki-e/install-action action to v2.62.36
+- Merge pull request #207 from okkez/renovate/tokio-1.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.62.35
+- *(deps)* update taiki-e/install-action action to v2.62.34
+- *(deps)* update taiki-e/install-action action to v2.62.33
+- *(deps)* update marcoieni/release-plz-action action to v0.5.118
+- *(deps)* update taiki-e/install-action action to v2.62.25
+- *(deps)* update taiki-e/install-action action to v2.62.14
+- *(deps)* update taiki-e/install-action action to v2.62.6
+- *(deps)* update taiki-e/install-action action to v2.62.5
+- Merge pull request #160 from okkez/renovate/actions-checkout-5.x
+- Merge pull request #195 from okkez/renovate/anyhow-1.x-lockfile
+- Merge pull request #196 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #194 from okkez/renovate/taiki-e-install-action-2.x
+- *(deps)* update taiki-e/install-action action to v2.61.9
+- Merge pull request #159 from okkez/renovate/anyhow-1.x-lockfile
+- Merge pull request #176 from okkez/renovate/rust-ini-0.x-lockfile
+- Merge pull request #189 from okkez/renovate/serde_json-1.x-lockfile
+- Merge pull request #141 from okkez/renovate/testcontainers
+- Merge pull request #177 from okkez/renovate/tokio-tracing-monorepo
+- Merge pull request #187 from okkez/renovate/marcoieni-release-plz-action-0.x
+- *(deps)* update taiki-e/install-action action to v2.61.0
+- Merge pull request #169 from okkez/renovate/clap-4.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.60.0
+- *(deps)* update marcoieni/release-plz-action action to v0.5.114
+- *(deps)* update taiki-e/install-action action to v2.58.32
+- *(deps)* update taiki-e/install-action action to v2.58.31
+- Merge pull request #167 from okkez/renovate/regex-1.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.58.30
+- *(deps)* update taiki-e/setup-cross-toolchain-action action to v1.31.1
+- *(deps)* update taiki-e/install-action action to v2.58.27
+- *(deps)* update taiki-e/setup-cross-toolchain-action action to v1.31.0
+- *(deps)* update taiki-e/install-action action to v2.58.25
+- *(deps)* update taiki-e/install-action action to v2.58.21
+- *(deps)* update taiki-e/install-action action to v2.58.18
+- *(deps)* update taiki-e/install-action action to v2.58.17
+- Merge pull request #155 from okkez/renovate/skim-0.x-lockfile
+- Merge pull request #156 from okkez/renovate/taiki-e-setup-cross-toolchain-action-1.x
+- Merge pull request #154 from okkez/renovate/actions-create-github-app-token-2.x
+- Merge pull request #157 from okkez/renovate/actions-checkout-4.x
+- *(deps)* update taiki-e/install-action action to v2.58.10
+- *(deps)* update taiki-e/install-action action to v2.57.8
+- Merge pull request #149 from okkez/renovate/skim-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.57.6
+- Merge pull request #144 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #138 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #139 from okkez/renovate/skim-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.57.1
+- Merge pull request #131 from okkez/renovate/toml-0.x-lockfile
+- Merge pull request #127 from okkez/renovate/rust-ini-0.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.56.24
+- Merge pull request #128 from okkez/renovate/tokio-1.x-lockfile
+- *(deps)* update taiki-e/install-action action to v2.56.23
+- Pin actions
+- Merge pull request #126 from okkez/renovate/skim-0.x-lockfile
+- Merge pull request #130 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #120 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #118 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #119 from okkez/renovate/testcontainers
+- Merge pull request #122 from okkez/renovate/skim-0.x
+- Merge pull request #108 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #116 from okkez/renovate/totp-rs-5.x-lockfile
+- Merge pull request #112 from okkez/renovate/chrono-0.x-lockfile
+- Merge pull request #105 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #111 from okkez/renovate/anyhow-1.x-lockfile
+- Merge pull request #110 from okkez/renovate/assert_cmd-2.x-lockfile
+- Merge pull request #107 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #113 from okkez/renovate/toml-0.x-lockfile
+- *(deps)* update testcontainers
+- Merge pull request #103 from okkez/renovate/serde_json-1.x-lockfile
+- Merge pull request #102 from okkez/renovate/rstest-0.x
+- Merge pull request #106 from okkez/renovate/serde-monorepo
+- *(deps)* update actions/create-github-app-token action to v2
+- Merge pull request #99 from okkez/renovate/clap-4.x-lockfile
+- Merge pull request #86 from okkez/renovate/testcontainers
+- Merge pull request #90 from okkez/renovate/tokio-1.x-lockfile
+- Merge pull request #91 from okkez/renovate/aws-sdk-rust-monorepo
+- Merge pull request #89 from okkez/renovate/tokio-tracing-monorepo
+- Merge pull request #94 from okkez/renovate/toml-0.x-lockfile
+- Merge pull request #95 from okkez/renovate/backon-1.x-lockfile
+- Merge pull request #88 from okkez/renovate/serde_json-1.x-lockfile
+
 ## [0.2.0](https://github.com/okkez/aws-assume-role-rs/compare/v0.1.7...v0.2.0) - 2025-01-07
 
 ### Added
