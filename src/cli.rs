@@ -496,11 +496,11 @@ impl<'a> Cli {
 }
 
 impl SkimItem for Item {
-    fn text(&self) -> Cow<str> {
+    fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.label)
     }
 
-    fn output(&self) -> Cow<str> {
+    fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.role_arn)
     }
 }
