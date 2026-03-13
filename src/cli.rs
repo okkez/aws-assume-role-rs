@@ -346,8 +346,8 @@ impl<'a> Cli {
     #[cfg(unix)]
     fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
         let (exe, args) = self.args.split_at(1);
-        Command::new(exe[0].clone()).args(args).envs(envs).exec();
-        Ok(())
+        let err = Command::new(exe[0].clone()).args(args).envs(envs).exec();
+        Err(err.into())
     }
 
     #[cfg(windows)]
@@ -496,11 +496,11 @@ impl<'a> Cli {
 }
 
 impl SkimItem for Item {
-    fn text(&self) -> Cow<str> {
+    fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.label)
     }
 
-    fn output(&self) -> Cow<str> {
+    fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.role_arn)
     }
 }
