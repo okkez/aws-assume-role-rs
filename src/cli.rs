@@ -346,7 +346,7 @@ impl<'a> Cli {
     #[cfg(unix)]
     fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
         let (exe, args) = self.args.split_at(1);
-        Command::new(exe[0].clone()).args(args).envs(envs).exec();
+        let _ = Command::new(exe[0].clone()).args(args).envs(envs).exec();
         Ok(())
     }
 
