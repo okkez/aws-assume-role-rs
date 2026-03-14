@@ -161,7 +161,7 @@ fn parse_duration(s: &str) -> Result<i32> {
         None => bail!("Failed to parse duration: {}", s),
     };
     ensure!(
-        duration >= 900 && duration <= 43200,
+        (900..=43200).contains(&duration),
         "duration ({}) must be between 900 seconds (15 minutes) and 43200 seconds (12 hours)",
         s
     );
@@ -184,7 +184,7 @@ struct Item {
     role_arn: String,
 }
 
-impl<'a> Cli {
+impl Cli {
     pub fn validate_arguments(&self) -> Result<(), clap::Error> {
         if self.aws_profile.is_none()
             && self.config.is_none()
@@ -372,7 +372,7 @@ impl<'a> Cli {
         }
 
         if let (Some(aws_profile_name), Some(config_path)) = (self.aws_profile.clone(), self.config.clone()) {
-            if config_path.extension() == None {
+            if config_path.extension().is_none() {
                 return self.serial_number_from_ini(&config_path, &aws_profile_name);
             }
         }
@@ -490,8 +490,8 @@ impl<'a> Cli {
             Key::Enter => out.selected_items,
             _ => vec![],
         });
-        println!("");
-        selected_items.unwrap().get(0).unwrap().output().as_ref().to_string()
+        println!();
+        selected_items.unwrap().first().unwrap().output().as_ref().to_string()
     }
 }
 
