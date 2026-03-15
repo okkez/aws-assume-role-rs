@@ -406,9 +406,11 @@ impl Cli {
                 .map_err(|e| anyhow!("Failed to decode TOTP secret: {}", e))?,
             None => bail!("TOTP_SECRET is required"),
         };
-        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret)
-            .map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
-        Ok(totp.generate_current().map_err(|e| anyhow!("Failed to generate TOTP: {}", e))?)
+        let totp =
+            TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
+        Ok(totp
+            .generate_current()
+            .map_err(|e| anyhow!("Failed to generate TOTP: {}", e))?)
     }
 
     fn role_arn(&self) -> Result<String> {
@@ -435,10 +437,12 @@ impl Cli {
             },
             None => {
                 let home_dir = dirs::home_dir().context("Unable to get home directory")?;
-                let path = home_dir
-                    .join(".aws/config.toml")
-                    .canonicalize()
-                    .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap_or_else(|_| home_dir.join(".aws/config")));
+                let path = home_dir.join(".aws/config.toml").canonicalize().unwrap_or_else(|_| {
+                    home_dir
+                        .join(".aws/config")
+                        .canonicalize()
+                        .unwrap_or_else(|_| home_dir.join(".aws/config"))
+                });
                 self.config_from_path(&Some(path))
             }
         }
@@ -460,7 +464,12 @@ impl Cli {
             .filter_map(|section| {
                 ini.get_from(Some(section), "role_arn").map(|role_arn| {
                     let key_part = section.split(' ').last().unwrap_or(section).to_string();
-                    (key_part, Profile { role_arn: role_arn.to_string() })
+                    (
+                        key_part,
+                        Profile {
+                            role_arn: role_arn.to_string(),
+                        },
+                    )
                 })
             })
             .collect::<HashMap<String, Profile>>();
@@ -469,7 +478,9 @@ impl Cli {
 
     #[cfg(test)]
     fn select_role_arn(&self, _config: &Config) -> Result<String> {
-        Err(anyhow!("select_role_arn is interactive method, so cannot invoke if test. check arguments before debug."))
+        Err(anyhow!(
+            "select_role_arn is interactive method, so cannot invoke if test. check arguments before debug."
+        ))
     }
 
     #[cfg(not(test))]
@@ -497,9 +508,7 @@ impl Cli {
 
         println!();
 
-        let item = selected_items
-            .first()
-            .context("No item selected")?;
+        let item = selected_items.first().context("No item selected")?;
 
         Ok(item.output().as_ref().to_string())
     }
