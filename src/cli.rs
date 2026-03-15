@@ -161,7 +161,7 @@ fn parse_duration(s: &str) -> Result<i32> {
         None => bail!("Failed to parse duration: {}", s),
     };
     ensure!(
-        duration >= 900 && duration <= 43200,
+        (900..=43200).contains(&duration),
         "duration ({}) must be between 900 seconds (15 minutes) and 43200 seconds (12 hours)",
         s
     );
@@ -184,7 +184,7 @@ struct Item {
     role_arn: String,
 }
 
-impl<'a> Cli {
+impl Cli {
     pub fn validate_arguments(&self) -> Result<(), clap::Error> {
         if self.aws_profile.is_none()
             && self.config.is_none()
@@ -250,7 +250,7 @@ impl<'a> Cli {
         let envs = match found {
             Some(json) => {
                 json_string = json.to_owned();
-                serde_json::from_str(&json_string).unwrap()
+                serde_json::from_str(&json_string).context("Invalid cache content")?
             }
             None => {
                 let credentials = self.assume_role(&sts, &role_arn).await?;
@@ -346,8 +346,8 @@ impl<'a> Cli {
     #[cfg(unix)]
     fn exec_command(&self, envs: &HashMap<&str, String>) -> Result<()> {
         let (exe, args) = self.args.split_at(1);
-        Command::new(exe[0].clone()).args(args).envs(envs).exec();
-        Ok(())
+        let err = Command::new(exe[0].clone()).args(args).envs(envs).exec();
+        Err(err.into())
     }
 
     #[cfg(windows)]
@@ -372,7 +372,7 @@ impl<'a> Cli {
         }
 
         if let (Some(aws_profile_name), Some(config_path)) = (self.aws_profile.clone(), self.config.clone()) {
-            if config_path.extension() == None {
+            if config_path.extension().is_none() {
                 return self.serial_number_from_ini(&config_path, &aws_profile_name);
             }
         }
@@ -401,11 +401,16 @@ impl<'a> Cli {
             return Ok(totp_code);
         }
         let secret = match self.totp_args.totp_secret.clone() {
-            Some(s) => Secret::Encoded(s).to_bytes().unwrap(),
+            Some(s) => Secret::Encoded(s)
+                .to_bytes()
+                .map_err(|e| anyhow!("Failed to decode TOTP secret: {}", e))?,
             None => bail!("TOTP_SECRET is required"),
         };
-        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).unwrap();
-        Ok(totp.generate_current().unwrap())
+        let totp =
+            TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
+        Ok(totp
+            .generate_current()
+            .map_err(|e| anyhow!("Failed to generate TOTP: {}", e))?)
     }
 
     fn role_arn(&self) -> Result<String> {
@@ -419,7 +424,7 @@ impl<'a> Cli {
                 Some(profile) => Ok(profile.role_arn.clone()),
                 None => Err(anyhow!("--role-arn={} is not found", name)),
             },
-            None => Ok(self.select_role_arn(&config)),
+            None => self.select_role_arn(&config),
         }
     }
 
@@ -432,10 +437,12 @@ impl<'a> Cli {
             },
             None => {
                 let home_dir = dirs::home_dir().context("Unable to get home directory")?;
-                let path = home_dir
-                    .join(".aws/config.toml")
-                    .canonicalize()
-                    .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap());
+                let path = home_dir.join(".aws/config.toml").canonicalize().unwrap_or_else(|_| {
+                    home_dir
+                        .join(".aws/config")
+                        .canonicalize()
+                        .unwrap_or_else(|_| home_dir.join(".aws/config"))
+                });
                 self.config_from_path(&Some(path))
             }
         }
@@ -453,12 +460,16 @@ impl<'a> Cli {
         let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
         let profile = ini
             .sections()
-            .filter(|section| section.is_some() && ini.get_from(Some(section.unwrap()), "role_arn").is_some())
-            .flat_map(|item| {
-                item.map(|key| {
-                    let key_part = key.split(' ').collect::<Vec<_>>().last().unwrap().to_string();
-                    let role_arn = ini.get_from(Some(key), "role_arn").unwrap().to_string();
-                    (key_part, Profile { role_arn })
+            .flatten()
+            .filter_map(|section| {
+                ini.get_from(Some(section), "role_arn").map(|role_arn| {
+                    let key_part = section.split(' ').last().unwrap_or(section).to_string();
+                    (
+                        key_part,
+                        Profile {
+                            role_arn: role_arn.to_string(),
+                        },
+                    )
                 })
             })
             .collect::<HashMap<String, Profile>>();
@@ -466,16 +477,18 @@ impl<'a> Cli {
     }
 
     #[cfg(test)]
-    fn select_role_arn(&self, _config: &Config) -> String {
-        panic!("select_role_arn is interactive method, so cannot invoke if test. check arguments before debug.");
+    fn select_role_arn(&self, _config: &Config) -> Result<String> {
+        Err(anyhow!(
+            "select_role_arn is interactive method, so cannot invoke if test. check arguments before debug."
+        ))
     }
 
     #[cfg(not(test))]
-    fn select_role_arn(&self, config: &Config) -> String {
+    fn select_role_arn(&self, config: &Config) -> Result<String> {
         let options = SkimOptionsBuilder::default()
             .bind(vec!["Enter::accept".to_string()])
             .build()
-            .unwrap();
+            .map_err(|e| anyhow!(e))?;
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
         for (name, profile) in &config.profile {
             let item = Item {
@@ -486,21 +499,27 @@ impl<'a> Cli {
         }
         drop(tx_item);
 
-        let selected_items = Skim::run_with(&options, Some(rx_item)).map(|out| match out.final_key {
-            Key::Enter => out.selected_items,
-            _ => vec![],
-        });
-        println!("");
-        selected_items.unwrap().get(0).unwrap().output().as_ref().to_string()
+        let selected_items = Skim::run_with(&options, Some(rx_item))
+            .map(|out| match out.final_key {
+                Key::Enter => out.selected_items,
+                _ => vec![],
+            })
+            .context("Skim execution failed")?;
+
+        println!();
+
+        let item = selected_items.first().context("No item selected")?;
+
+        Ok(item.output().as_ref().to_string())
     }
 }
 
 impl SkimItem for Item {
-    fn text(&self) -> Cow<str> {
+    fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.label)
     }
 
-    fn output(&self) -> Cow<str> {
+    fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.role_arn)
     }
 }
@@ -778,5 +797,46 @@ mod tests {
         assert_eq!("test_access_key_id", credentials.access_key_id());
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
         assert_eq!("test_session_token", credentials.session_token());
+    }
+
+    #[test]
+    fn test_select_role_arn_in_test() {
+        let cli = Cli::parse_from(["assume-role"]);
+        let config = Config {
+            profile: HashMap::new(),
+        };
+        let result = cli.select_role_arn(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("select_role_arn is interactive method"));
+    }
+
+    #[test]
+    fn test_config_from_ini_filtering() -> Result<()> {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new()?;
+        writeln!(
+            file,
+            r#"[profile test]
+role_arn = arn:aws:iam::123456789012:role/TestRole
+
+[profile no_role]
+something_else = dummy
+"#
+        )?;
+        let path = file.path().to_path_buf();
+        let cli = Cli::parse_from(["assume-role"]);
+        let config = cli.config_from_ini(&path)?;
+
+        assert!(config.profile.contains_key("test"));
+        assert!(!config.profile.contains_key("no_role"));
+        assert_eq!(
+            config.profile.get("test").unwrap().role_arn,
+            "arn:aws:iam::123456789012:role/TestRole"
+        );
+
+        Ok(())
     }
 }

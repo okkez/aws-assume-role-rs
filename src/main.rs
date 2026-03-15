@@ -18,7 +18,7 @@ async fn main() {
         None => loader,
     };
     let loader = match cli.config.clone() {
-        Some(config_path) if config_path.extension() == None => {
+        Some(config_path) if config_path.extension().is_none() => {
             let profile_files = EnvConfigFiles::builder()
                 .with_file(EnvConfigFileKind::Config, config_path)
                 .build();
