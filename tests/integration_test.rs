@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use assert_cmd::Command;
 use aws_sdk_sts as sts;
 use chrono::{DateTime, Utc};
 use regex::Regex;
@@ -64,7 +63,7 @@ async fn make_sts_config(container: &ContainerAsync<LocalStack>) -> Result<sts::
 #[case::conflict_totp_secret_and_totp_code(
     vec!["--role-arn", "arn:aws:iam...", "--totp-secret", "secret", "--totp-code", "123456"], false, 2)]
 fn test_arguments(#[case] args: Vec<&str>, #[case] success: bool, #[case] code: i32) {
-    let assert = Command::cargo_bin("assume-role").unwrap().args(args).assert();
+    let assert = assert_cmd::cargo_bin_cmd!("assume-role").args(args).assert();
     if success {
         assert.success().code(code);
     } else {
@@ -79,8 +78,7 @@ async fn format_json() -> Result<()> {
     let endpoint_url = endpoint_url(&container).await?;
 
     {
-        let assert = Command::cargo_bin("assume-role")
-            .unwrap()
+        let assert = assert_cmd::cargo_bin_cmd!("assume-role")
             .env("AWS_ENDPOINT_URL", endpoint_url.clone())
             .env("AWS_ACCESS_KEY_ID", "fake")
             .env("AWS_SECRET_ACCESS_KEY", "fake")
@@ -99,7 +97,7 @@ async fn format_json() -> Result<()> {
         let re_aws_secret_access_key = Regex::new(r"[a-zA-Z0-9]+").unwrap();
         assert!(re_aws_secret_access_key.is_match(&c.aws_secret_access_key));
         assert!(c.aws_expiration.to_rfc3339().starts_with("20"));
-        assert!(c.aws_session_token.len() > 0);
+        assert!(!c.aws_session_token.is_empty());
     }
 
     {
@@ -107,8 +105,7 @@ async fn format_json() -> Result<()> {
         let full_path = path.canonicalize()?;
         println!("{:?}", path);
 
-        let assert = Command::cargo_bin("assume-role")
-            .unwrap()
+        let assert = assert_cmd::cargo_bin_cmd!("assume-role")
             .env("AWS_ENDPOINT_URL", endpoint_url.clone())
             .env("AWS_ACCESS_KEY_ID", "fake")
             .env("AWS_SECRET_ACCESS_KEY", "fake")
@@ -129,7 +126,7 @@ async fn format_json() -> Result<()> {
         let re_aws_secret_access_key = Regex::new(r"[a-zA-Z0-9]+").unwrap();
         assert!(re_aws_secret_access_key.is_match(&c.aws_secret_access_key));
         assert!(c.aws_expiration.to_rfc3339().starts_with("20"));
-        assert!(c.aws_session_token.len() > 0);
+        assert!(!c.aws_session_token.is_empty());
     }
 
     Ok(())
@@ -146,8 +143,7 @@ async fn format_shell(#[case] shell_type: String, #[case] prefix: String) -> Res
     let container = run_localstack().await?;
     let endpoint_url = endpoint_url(&container).await?;
 
-    let assert = Command::cargo_bin("assume-role")
-        .unwrap()
+    let assert = assert_cmd::cargo_bin_cmd!("assume-role")
         .env("AWS_ENDPOINT_URL", endpoint_url)
         .env("AWS_ACCESS_KEY_ID", "fake")
         .env("AWS_SECRET_ACCESS_KEY", "fake")

@@ -12,7 +12,7 @@ fn verify_cli() {
 fn no_arguments() {
     let cli = Cli::parse_from(["assume-role"]);
     let r = cli.validate_arguments();
-    assert!(!r.is_ok());
+    assert!(r.is_err());
 }
 
 #[rstest]
