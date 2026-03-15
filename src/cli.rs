@@ -486,7 +486,7 @@ impl Cli {
     #[cfg(not(test))]
     fn select_role_arn(&self, config: &Config) -> Result<String> {
         let options = SkimOptionsBuilder::default()
-            .bind(vec!["Enter::accept".to_string()])
+            .bind(vec!["enter:accept".to_string()])
             .build()
             .map_err(|e| anyhow!(e))?;
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
@@ -495,16 +495,15 @@ impl Cli {
                 label: format!("{:<30}\t{}", name, profile.role_arn),
                 role_arn: profile.role_arn.clone(),
             };
-            let _ = tx_item.send(Arc::new(item));
+            let _ = tx_item.send(vec![Arc::new(item)]);
         }
         drop(tx_item);
 
-        let selected_items = Skim::run_with(&options, Some(rx_item))
-            .map(|out| match out.final_key {
-                Key::Enter => out.selected_items,
-                _ => vec![],
-            })
+        let output = Skim::run_with(options, Some(rx_item))
+            .map_err(|e| anyhow!("{}", e))
             .context("Skim execution failed")?;
+
+        let selected_items = if output.is_abort { vec![] } else { output.selected_items };
 
         println!();
 
