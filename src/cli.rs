@@ -789,4 +789,45 @@ mod tests {
         assert_eq!("test_secret_access_key", credentials.secret_access_key());
         assert_eq!("test_session_token", credentials.session_token());
     }
+
+    #[test]
+    fn test_select_role_arn_in_test() {
+        let cli = Cli::parse_from(["assume-role"]);
+        let config = Config {
+            profile: HashMap::new(),
+        };
+        let result = cli.select_role_arn(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("select_role_arn is interactive method"));
+    }
+
+    #[test]
+    fn test_config_from_ini_filtering() -> Result<()> {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new()?;
+        writeln!(
+            file,
+            r#"[profile test]
+role_arn = arn:aws:iam::123456789012:role/TestRole
+
+[profile no_role]
+something_else = dummy
+"#
+        )?;
+        let path = file.path().to_path_buf();
+        let cli = Cli::parse_from(["assume-role"]);
+        let config = cli.config_from_ini(&path)?;
+
+        assert!(config.profile.contains_key("test"));
+        assert!(!config.profile.contains_key("no_role"));
+        assert_eq!(
+            config.profile.get("test").unwrap().role_arn,
+            "arn:aws:iam::123456789012:role/TestRole"
+        );
+
+        Ok(())
+    }
 }
