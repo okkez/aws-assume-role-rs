@@ -250,7 +250,7 @@ impl Cli {
         let envs = match found {
             Some(json) => {
                 json_string = json.to_owned();
-                serde_json::from_str(&json_string).unwrap()
+                serde_json::from_str(&json_string).context("Invalid cache content")?
             }
             None => {
                 let credentials = self.assume_role(&sts, &role_arn).await?;
@@ -401,11 +401,14 @@ impl Cli {
             return Ok(totp_code);
         }
         let secret = match self.totp_args.totp_secret.clone() {
-            Some(s) => Secret::Encoded(s).to_bytes().unwrap(),
+            Some(s) => Secret::Encoded(s)
+                .to_bytes()
+                .map_err(|e| anyhow!("Failed to decode TOTP secret: {}", e))?,
             None => bail!("TOTP_SECRET is required"),
         };
-        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).unwrap();
-        Ok(totp.generate_current().unwrap())
+        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret)
+            .map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
+        Ok(totp.generate_current().map_err(|e| anyhow!("Failed to generate TOTP: {}", e))?)
     }
 
     fn role_arn(&self) -> Result<String> {
@@ -419,7 +422,7 @@ impl Cli {
                 Some(profile) => Ok(profile.role_arn.clone()),
                 None => Err(anyhow!("--role-arn={} is not found", name)),
             },
-            None => Ok(self.select_role_arn(&config)),
+            None => self.select_role_arn(&config),
         }
     }
 
@@ -435,7 +438,7 @@ impl Cli {
                 let path = home_dir
                     .join(".aws/config.toml")
                     .canonicalize()
-                    .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap());
+                    .unwrap_or_else(|_| home_dir.join(".aws/config").canonicalize().unwrap_or_else(|_| home_dir.join(".aws/config")));
                 self.config_from_path(&Some(path))
             }
         }
@@ -453,12 +456,11 @@ impl Cli {
         let ini = Ini::load_from_file(path).context("Unable to parse ini")?;
         let profile = ini
             .sections()
-            .filter(|section| section.is_some() && ini.get_from(Some(section.unwrap()), "role_arn").is_some())
-            .flat_map(|item| {
-                item.map(|key| {
-                    let key_part = key.split(' ').collect::<Vec<_>>().last().unwrap().to_string();
-                    let role_arn = ini.get_from(Some(key), "role_arn").unwrap().to_string();
-                    (key_part, Profile { role_arn })
+            .flatten()
+            .filter_map(|section| {
+                ini.get_from(Some(section), "role_arn").map(|role_arn| {
+                    let key_part = section.split(' ').last().unwrap_or(section).to_string();
+                    (key_part, Profile { role_arn: role_arn.to_string() })
                 })
             })
             .collect::<HashMap<String, Profile>>();
@@ -466,16 +468,16 @@ impl Cli {
     }
 
     #[cfg(test)]
-    fn select_role_arn(&self, _config: &Config) -> String {
-        panic!("select_role_arn is interactive method, so cannot invoke if test. check arguments before debug.");
+    fn select_role_arn(&self, _config: &Config) -> Result<String> {
+        Err(anyhow!("select_role_arn is interactive method, so cannot invoke if test. check arguments before debug."))
     }
 
     #[cfg(not(test))]
-    fn select_role_arn(&self, config: &Config) -> String {
+    fn select_role_arn(&self, config: &Config) -> Result<String> {
         let options = SkimOptionsBuilder::default()
             .bind(vec!["Enter::accept".to_string()])
             .build()
-            .unwrap();
+            .map_err(|e| anyhow!(e))?;
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
         for (name, profile) in &config.profile {
             let item = Item {
@@ -486,12 +488,20 @@ impl Cli {
         }
         drop(tx_item);
 
-        let selected_items = Skim::run_with(&options, Some(rx_item)).map(|out| match out.final_key {
-            Key::Enter => out.selected_items,
-            _ => vec![],
-        });
+        let selected_items = Skim::run_with(&options, Some(rx_item))
+            .map(|out| match out.final_key {
+                Key::Enter => out.selected_items,
+                _ => vec![],
+            })
+            .context("Skim execution failed")?;
+
         println!();
-        selected_items.unwrap().first().unwrap().output().as_ref().to_string()
+
+        let item = selected_items
+            .first()
+            .context("No item selected")?;
+
+        Ok(item.output().as_ref().to_string())
     }
 }
 
