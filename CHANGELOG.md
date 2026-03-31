@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.1...v0.2.2) - 2026-03-31
+
+### Other
+
+- *(deps)* update taiki-e/install-action action to v2.70.2
+- replace dtolnay/rust-toolchain with actions-rust-lang/setup-rust-toolchain
+- *(deps)* update taiki-e/upload-rust-binary-action action to v1.29.1
+- *(deps)* update taiki-e/install-action action to v2.68.32
+
 ## [0.2.1](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.0...v0.2.1) - 2026-03-15
 
 ### Added
