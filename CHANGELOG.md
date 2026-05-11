@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.1...v0.2.2) - 2026-05-11
+
+### Other
+
+- Merge pull request #293 from okkez/renovate/skim-4.x-lockfile
+- *(deps)* update rust crate toml to v1.1.2
+- Merge pull request #289 from okkez/renovate/assert_cmd-2.x-lockfile
+- Merge pull request #291 from okkez/renovate/actions-rust-lang-setup-rust-toolchain-1.x
+- *(deps)* update actions-rust-lang/setup-rust-toolchain action to v1.16.1
+- Merge pull request #297 from okkez/renovate/taiki-e-upload-rust-binary-action-1.x
+- *(deps)* update taiki-e/upload-rust-binary-action action to v1.30.2
+- *(deps)* update taiki-e/install-action action to v2.70.2
+- replace dtolnay/rust-toolchain with actions-rust-lang/setup-rust-toolchain
+- *(deps)* update taiki-e/upload-rust-binary-action action to v1.29.1
+- *(deps)* update taiki-e/install-action action to v2.68.32
+
 ## [0.2.1](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.0...v0.2.1) - 2026-03-15
 
 ### Added
