@@ -145,6 +145,7 @@ enum Format {
     Zsh,
     Fish,
     PowerShell,
+    CredentialProcess,
 }
 
 fn parse_duration(s: &str) -> Result<i32> {
@@ -339,6 +340,13 @@ impl Cli {
                 .map(|(k, v)| format!(r#"$env:{}="{}""#, k, v))
                 .collect::<Vec<_>>()
                 .join("\n"),
+            Format::CredentialProcess => serde_json::to_string(&serde_json::json!({
+                "Version": 1,
+                "AccessKeyId": envs.get("AWS_ACCESS_KEY_ID").context("AWS_ACCESS_KEY_ID is missing")?,
+                "SecretAccessKey": envs.get("AWS_SECRET_ACCESS_KEY").context("AWS_SECRET_ACCESS_KEY is missing")?,
+                "SessionToken": envs.get("AWS_SESSION_TOKEN").context("AWS_SESSION_TOKEN is missing")?,
+                "Expiration": envs.get("AWS_EXPIRATION").context("AWS_EXPIRATION is missing")?,
+            }))?,
         };
         Ok(result)
     }
