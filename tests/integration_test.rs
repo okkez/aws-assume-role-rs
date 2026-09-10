@@ -19,6 +19,16 @@ struct TemporaryCredentials {
     aws_expiration: DateTime<Utc>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct TemporaryCredentialProcess {
+    version: i64,
+    access_key_id: String,
+    secret_access_key: String,
+    session_token: String,
+    expiration: DateTime<Utc>,
+}
+
 #[allow(dead_code)]
 fn make_sts_test_credentials() -> sts::config::Credentials {
     sts::config::Credentials::new("fake", "fake", None, None, "test")
@@ -127,6 +137,69 @@ async fn format_json() -> Result<()> {
         assert!(re_aws_secret_access_key.is_match(&c.aws_secret_access_key));
         assert!(c.aws_expiration.to_rfc3339().starts_with("20"));
         assert!(!c.aws_session_token.is_empty());
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore]
+async fn format_credential_process() -> Result<()> {
+    let container = run_localstack().await?;
+    let endpoint_url = endpoint_url(&container).await?;
+
+    {
+        let assert = assert_cmd::cargo_bin_cmd!("assume-role")
+            .env("AWS_ENDPOINT_URL", endpoint_url.clone())
+            .env("AWS_ACCESS_KEY_ID", "fake")
+            .env("AWS_SECRET_ACCESS_KEY", "fake")
+            .env("AWS_DEFAULT_REGION", "ap-northeast-1")
+            .env("SERIAL_NUMBER", "fake")
+            .env("TOTP_CODE", "123456")
+            .arg("--format=credential-process")
+            .arg("--role-arn=arn:aws:iam::123456789012:role/TestUser")
+            .assert();
+        println!("assertion start");
+        let output = assert.get_output().to_owned();
+        assert.success().code(0);
+        let c: TemporaryCredentialProcess = serde_json::from_str(&String::from_utf8(output.stdout)?)?;
+        assert_eq!(c.version, 1);
+        let re_aws_access_key_id = Regex::new(r"[A-Z0-9]{20}").unwrap();
+        assert!(re_aws_access_key_id.is_match(&c.access_key_id));
+        let re_aws_secret_access_key = Regex::new(r"[a-zA-Z0-9]+").unwrap();
+        assert!(re_aws_secret_access_key.is_match(&c.secret_access_key));
+        assert!(c.expiration.to_rfc3339().starts_with("20"));
+        assert!(!c.session_token.is_empty());
+    }
+
+    {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests/fixtures/config.toml"));
+        let full_path = path.canonicalize()?;
+        println!("{:?}", path);
+
+        let assert = assert_cmd::cargo_bin_cmd!("assume-role")
+            .env("AWS_ENDPOINT_URL", endpoint_url.clone())
+            .env("AWS_ACCESS_KEY_ID", "fake")
+            .env("AWS_SECRET_ACCESS_KEY", "fake")
+            .env("AWS_DEFAULT_REGION", "ap-northeast-1")
+            .env("SERIAL_NUMBER", "fake")
+            .env("TOTP_CODE", "123456")
+            .arg("--format=credential-process")
+            .arg("--config")
+            .arg(full_path)
+            .arg("--profile-name=test")
+            .assert();
+        println!("assertion start");
+        let output = assert.get_output().to_owned();
+        assert.success().code(0);
+        let c: TemporaryCredentialProcess = serde_json::from_str(&String::from_utf8(output.stdout)?)?;
+        assert_eq!(c.version, 1);
+        let re_aws_access_key_id = Regex::new(r"[A-Z0-9]{20}").unwrap();
+        assert!(re_aws_access_key_id.is_match(&c.access_key_id));
+        let re_aws_secret_access_key = Regex::new(r"[a-zA-Z0-9]+").unwrap();
+        assert!(re_aws_secret_access_key.is_match(&c.secret_access_key));
+        assert!(c.expiration.to_rfc3339().starts_with("20"));
+        assert!(!c.session_token.is_empty());
     }
 
     Ok(())
