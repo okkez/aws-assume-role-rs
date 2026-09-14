@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.2...v0.2.3) - 2026-09-14
+
+### Other
+
+- *(deps)* update rust crate toml to v1.1.6
+- Merge pull request #321 from okkez/renovate/marcoieni-release-plz-action-0.x
+- Merge pull request #332 from okkez/renovate/actions-rust-lang-setup-rust-toolchain-2.x
+- *(deps)* update taiki-e/install-action action to v2.87.12
+- Merge pull request #319 from okkez/renovate/taiki-e-install-action-2.x
+- *(deps)* update taiki-e/install-action action to v2.87.10
+
 ## [0.2.2](https://github.com/okkez/aws-assume-role-rs/compare/v0.2.1...v0.2.2) - 2026-09-11
 
 ### Added
