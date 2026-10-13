@@ -35,7 +35,7 @@ serde_json = "1.0.117"
 skim = { version = "5.0.0", default-features = false, features = ["frizbee"] }
 tokio = { version = "1.37.0", features = ["full"] }
 toml = "1.0.0"
-totp-rs = "5.5.1"
+totp-rs = "6.0.0"
 tracing = "0.1.0"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
