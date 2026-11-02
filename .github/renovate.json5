@@ -10,6 +10,11 @@
     {
       "groupName": "testcontainers",
       "matchPackageNames": ["/^testcontainers$/", "/^testcontainers-modules$/"],
-    }
+    },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "separateMajorMinor": false,
+    },
   ]
 }
