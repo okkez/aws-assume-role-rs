@@ -18,7 +18,7 @@ use std::io::Read;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
-use totp_rs::{Algorithm, Secret, TOTP};
+use totp_rs::{Algorithm, Builder, Secret};
 use tracing_subscriber::util::SubscriberInitExt;
 
 #[allow(unused_imports)]
@@ -409,15 +409,18 @@ impl Cli {
             return Ok(totp_code);
         }
         let secret = match self.totp_args.totp_secret.clone() {
-            Some(s) => Secret::Encoded(s)
-                .to_bytes()
-                .map_err(|e| anyhow!("Failed to decode TOTP secret: {}", e))?,
+            Some(s) => Secret::try_from_base32(s).map_err(|e| anyhow!("Failed to decode TOTP secret: {}", e))?,
             None => bail!("TOTP_SECRET is required"),
         };
-        let totp =
-            TOTP::new(Algorithm::SHA1, 6, 1, 30, secret).map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
-        totp.generate_current()
-            .map_err(|e| anyhow!("Failed to generate TOTP: {}", e))
+        let totp = Builder::new()
+            .with_algorithm(Algorithm::SHA1)
+            .with_digits(6)
+            .with_skew(1)
+            .with_step_duration(30)
+            .with_secret(secret)
+            .build()
+            .map_err(|e| anyhow!("Failed to initialize TOTP: {}", e))?;
+        Ok(totp.generate_current().to_string())
     }
 
     fn role_arn(&self) -> Result<String> {
